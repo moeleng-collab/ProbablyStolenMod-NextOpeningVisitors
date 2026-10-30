@@ -1,0 +1,32 @@
+# IDE and local settings
+.idea/
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Local credentials — never commit private keys
+.ssh/
+*.pem
+*.key
+
+# Reverse-engineering and local analysis materials
+analysis/
+
+# Build and release artifacts
+build/
+release/
+*.pdb
+
+# Generated test hosts
+tests/*.dll
+tests/*.runtimeconfig.json
+
+# Local browser automation records and upload-process screenshots
+workshop-images/webbridge-*.json
+workshop-images/file-dialog.png
+workshop-images/media-page.png
+
+# OS metadata
+Thumbs.db
+Desktop.ini

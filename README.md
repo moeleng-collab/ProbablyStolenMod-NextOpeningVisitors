@@ -1,0 +1,154 @@
+# Next Opening: Suppliers & Odin
+
+《Probably Stolen》的本地／Steam Workshop Mod。当前代码版本为 **1.5.0**，目标游戏版本为 **0.46D**。
+
+## 当前功能
+
+- 让四位供货商与奥丁在下一次开店时优先到访；
+- 合并同一联系人的重复预约，保留最早的一项；
+- 在电话界面一键清除目标联系人的冷却，同时保护已有预约；
+- 将相关电话文案同步为“下一次开店”；
+- 在交易平板显示当前调查进度，以及当前案值、成交后案值和本次新增案值；
+- 在日终平板根据当前收尾人选择预测夜间案值、调查增量和次日调查进度；
+- 调查达到 100 后，由王哥自动来电提供付费清除服务；
+- 上述新增界面、电话与提示支持游戏内 11 种语言。
+
+预测只读取当前状态，不执行交易或夜间结算。自动清除只重置调查进度与案件状态，**不会清除案值、取消既有调查流程或移除已派遣治安官**，也不消耗 Wild Favor。
+
+> **验证边界：**1.5.0 已通过纯规则测试、编译与官方 Mod 扫描；真实游戏内 UI、电话、存档和禁用／重启用验收尚未执行，不能把自动化结果当作游戏内验收通过。
+
+## 文档导航
+
+| 文档 | 用途 |
+| --- | --- |
+| [现有功能行为规格](docs/behavior-spec.md) | 1.5.0 的触发条件、状态变化、边界与验收规则 |
+| [现有项目架构](docs/architecture.md) | 代码分层、补丁点、数据流、生命周期与构建结构 |
+| [测试说明](docs/testing.md) | 自动化结果、扫描、游戏内验收与发布检查 |
+| [1.5.0 更新说明](docs/v1.5.0-update.md) | 三项新功能的需求、公式、实现状态与验收标准 |
+| [技术手册](docs/technical-manual.md) | 原版罪案机制、当前实现、持久化与适配约束 |
+
+面向玩家的中英双语文案位于 `WORKSHOP_DESCRIPTION.md` 和 `WORKSHOP_DESCRIPTION_BBCode.txt`。本版本未执行 Workshop 上传。
+
+## 运行与兼容环境
+
+已核对的目标环境：
+
+- 游戏：《Probably Stolen》正式版 `0.46D`；
+- 引擎：Unity `2021.3.45f2`；
+- 运行时：Mono；
+- Mod 目标框架：`.NET Standard 2.1`；
+- Mod 入口：游戏正式 `IMod` 加载器与 Harmony；
+- 当前开发系统：Windows。
+
+`manifest.xml` 中的游戏版本声明不是完整兼容保证。游戏更新后，必须重新核对补丁目标、访客 ID、UI 字段、罪案公式和规则测试。其他修改相同交易、日结、电话或调查规则的 Mod 可能改变补丁顺序或使预测与真实结果不一致。
+
+## 项目结构
+
+```text
+NextOpeningVisitors/
+├─ manifest.xml                     # Mod 身份、版本、程序集与能力声明
+├─ build.py                         # 编译并安装到本地 Mods
+├─ run_tests.py                     # 编译并运行纯规则测试
+├─ run_scan.py                      # 调用游戏 ModScanner 扫描构建产物
+├─ src/
+│  ├─ NextOpeningVisitorsMod.cs     # IMod 入口与访客队列补丁
+│  ├─ VisitorRules.cs               # 预约识别、去重、延迟归一化与稳定优先排序
+│  ├─ CooldownResetRules.cs         # 冷却清除与待到访保护
+│  ├─ PhoneCooldownResetButton.cs   # 电话冷却按钮
+│  ├─ PhoneDialogueText*.cs         # 电话文案补丁与规则
+│  ├─ CrimeForecastModels.cs        # 交易与夜间预测输入／输出模型
+│  ├─ CrimeForecastRules.cs         # 纯案值与调查公式
+│  ├─ CrimeForecastAdapter.cs       # 当前游戏状态的只读快照适配
+│  ├─ CrimeForecastLocalization.cs  # 新功能 11 语文案
+│  ├─ TradeForecastUI.cs            # 交易预测 UI
+│  ├─ NightForecastUI.cs            # 日终预测 UI
+│  ├─ AutoEvidenceCallState.cs      # 报价状态、序列化与接受校验
+│  └─ AutoEvidenceCallController.cs # 服务注册、自动来电、支付与清理
+├─ Properties/AssemblyInfo.cs       # 程序集版本与目标框架
+├─ tests/                          # 规则测试与官方扫描器宿主
+├─ analysis/                       # 版本相关分析材料，不进入发布包
+├─ build/                          # 本地编译输出
+└─ release/NextOpeningVisitors/     # 发布文件：manifest.xml 与 Mod DLL
+```
+
+项目没有 `.sln` 或 `.csproj`；构建脚本直接调用 Roslyn 编译器。
+
+## 构建前检查
+
+以下路径均相对于游戏根目录：
+
+- `.port-tools/dotnet/dotnet.exe`：便携 .NET 运行时；
+- `.port-tools/dotnet/sdk/8.0.427/Roslyn/bincore/csc.dll`：编译器；
+- `.port-tools/dotnet/packs/Microsoft.NETCore.App.Ref/8.0.33/ref/net8.0/`：测试宿主引用；
+- `Probably Stolen_Data/Managed/`：游戏、Unity、Harmony 等程序集。
+
+脚本通过 `Path(__file__).resolve().parents[2]` 定位游戏根目录，因此应保持 `Modding/NextOpeningVisitors` 这一相对位置，或同步修改脚本。
+
+## 构建、测试与本地安装
+
+在游戏根目录执行完整验证：
+
+```bash
+python Modding/NextOpeningVisitors/run_tests.py
+python Modding/NextOpeningVisitors/build.py
+python Modding/NextOpeningVisitors/run_scan.py
+```
+
+也可以在本 Mod 目录分别执行 `python run_tests.py`、`python build.py` 和 `python run_scan.py`。
+
+当前结果：
+
+```text
+PASS: 818 assertions; visitor, forecast, automatic offer and localization rules verified.
+Error: <none>
+Refused: False
+MethodsScanned: 160
+Capabilities: <none>
+HardFlags: 0
+Findings: 0
+```
+
+`build.py` 会编译全部 `src/*.cs` 与程序集信息，生成 DLL 和便携 PDB，再把 DLL 与清单安装到 `Mods/NextOpeningVisitors/`。它不会自动更新 `release/`，也不会上传 Workshop。扫描通过不等于游戏内行为正确，仍须执行[游戏内验收](docs/testing.md#5-游戏内验收)。
+
+本地启用时，在游戏的 Mod 管理界面检查并启用 Mod，按提示重启。需要区分：
+
+- **已发现**：加载器识别到清单；
+- **已启用**：玩家允许加载；
+- **已初始化**：日志出现 `Initialized: Next Opening Visitors v1.5.0`。
+
+游戏内 F8 可查看 Mod／调试日志，程序集或初始化错误还应检查 `Player.log`。当前尚未取得 1.5.0 的真实加载与初始化验收记录。
+
+## 手动发布
+
+发布目录只应包含：
+
+```text
+NextOpeningVisitors/
+├─ manifest.xml
+└─ NextOpeningVisitors.dll
+```
+
+不要打入游戏原始程序集、反编译源码或资源、`analysis/`、`tests/`、`build/`、PDB、日志、缓存、本地配置或上传工具状态。
+
+更新版本时至少同步：
+
+1. `manifest.xml` 的 `ModVersion`；
+2. `Properties/AssemblyInfo.cs` 的程序集版本；
+3. `NextOpeningVisitorsMod.cs` 的初始化日志版本；
+4. Workshop 功能与兼容性说明；
+5. 行为规格、测试记录和技术文档；
+6. `release/NextOpeningVisitors/` 中的清单和 DLL。
+
+保持 `manifest.xml` 的 `ID` 为 `nextopeningvisitors`，不要因版本更新更换 Mod 身份或新建重复 Workshop 项目。
+
+## 禁用、存档与故障回退
+
+`OnDisable()` 会退订 1.5.0 使用的游戏事件，销毁自动电话持久宿主，注销自定义服务，并清理预测 UI。禁用后的预测刷新只恢复布局，不再创建文本。Harmony 补丁和既有电话按钮仍由游戏加载环境管理，禁用／启用验收应按加载器要求重启，不能假设所有运行时修改都会即时撤销。
+
+预测失败会隐藏新增内容并尽量恢复原版布局；队列补丁失败会保留原版调度；自动来电展示失败不扣款、不清调查、不涨价。接受操作会重新校验报价、日期、调查和现金，并在异常时尝试回滚本次现金、调查、案件状态、价格与报价状态修改。
+
+自动服务状态通过 `PlayerStore.ModData()` 随存档保存，价格保存在独立的自定义 `NetworkUpgrade` 中。卸载 Mod 不会自动恢复已经写入存档的预约、冷却、现金或罪案字段；升级和回滚前应备份存档。
+
+## 版权与分发
+
+`analysis/` 仅用于本地版本适配分析，不是可再分发源码。发布包不得包含游戏程序集、反编译代码、加载器文件或无授权的第三方资源。
