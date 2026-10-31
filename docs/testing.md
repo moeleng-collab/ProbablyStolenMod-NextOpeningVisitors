@@ -26,14 +26,14 @@ python Modding/NextOpeningVisitors/build.py
 python Modding/NextOpeningVisitors/run_scan.py
 ```
 
-2026-10-30 当前候选代码结果：
+2026-10-31 当前候选代码结果：
 
 ```text
-PASS: 818 assertions; visitor, forecast, automatic offer and localization rules verified.
+PASS: 842 assertions; visitor, forecast, automatic offer and localization rules verified.
 Built and installed: D:\steam\steamapps\common\Probably Stolen\Mods\NextOpeningVisitors
 Error: <none>
 Refused: False
-MethodsScanned: 160
+MethodsScanned: 161
 Capabilities: <none>
 HardFlags: 0
 Findings: 0
@@ -96,8 +96,8 @@ Findings: 0
 
 ### 2.6 新功能本地化
 
-- 17 类预测／服务／电话／结果文本在 11 种语言下非空；
-- 参数格式化可执行，未知语言回退英文；
+- 19 类预测／服务／电话／结果文本在 11 种语言下非空；
+- 参数格式化可执行，未知语言回退英文；来电正文三段互不重复，价格只出现在第二段；
 - 中文、英文及其他语言的实际字体、换行、遮挡和 UI 缩放尚未渲染验收。
 
 ## 3. 构建与发布产物检查
@@ -146,6 +146,7 @@ Findings: 0
 - [ ] 赃物、违禁品、双标签、阵营、证据豁免与特长结果逐项等于真实成交；
 - [ ] 切换物品、协商价、交易模式、成交和预算确认后 UI 立即刷新；
 - [ ] 无可售物品时不保留额外空白，合法物品显示 `+0`；
+- [ ] 交租日商人页面反复放上、取下物品后，预测文案位置固定，信息区高度不累计；
 - [ ] 仅打开或刷新界面不改变案值、调查、现金、队列或存档；
 - [ ] 常用分辨率、UI 缩放和中英文长文本无裁切或错位。
 
@@ -161,6 +162,8 @@ Findings: 0
 ### 5.5 王哥自动电话
 
 - [ ] 调查不足 100 不来电，达到 100 的新日只创建一次报价；
+- [ ] 读取调查已为 100 且当天无报价的存档会补建报价；当天已有、已接受或已拒绝报价时不重复创建；
+- [ ] 自动服务与原版清除证据服务同处 `Informant`（线人）栏目；
 - [ ] 晨间报告、交易、其他电话和模态 UI 不被覆盖，空闲后能展示；
 - [ ] 接受、拒绝、余额不足、未选择关闭、当天重开电话和跨天分支符合行为规格；
 - [ ] 保存／重载恢复价格、每日标记和 pending，不重复弹出、不重新定价；
@@ -186,8 +189,8 @@ Findings: 0
 版本：1.5.0
 游戏版本：0.46D
 构建提交／源码状态：当前工作区候选代码
-规则测试日期与结果：2026-10-30，818 assertions 通过
-官方扫描日期与结果：2026-10-30，160 methods，0 findings，Refused=False
+规则测试日期与结果：2026-10-31，842 assertions 通过
+官方扫描日期与结果：2026-10-31，161 methods，0 findings，Refused=False
 游戏内已测场景：无
 未测场景：第 5 节全部
 已知问题：尚无真实游戏内运行证据

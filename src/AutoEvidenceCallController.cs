@@ -41,6 +41,7 @@ namespace NextOpeningVisitors
             EnsureRegistered();
             LoadState();
             _presentedOfferDay = -1;
+            CheckDailyOffer("load");
             EnsureHost();
             ArmIfPending();
         }
@@ -58,6 +59,14 @@ namespace NextOpeningVisitors
         {
             EnsureRegistered();
             LoadState();
+            _presentedOfferDay = -1;
+            CheckDailyOffer("wake");
+            EnsureHost();
+            ArmIfPending();
+        }
+
+        private static void CheckDailyOffer(string trigger)
+        {
             PlayerStore? store = PlayerStore.Instance;
             if (store?.secData == null || StoreStation.Instance == null) return;
             NetworkUpgrade? service = GetRuntimeService();
@@ -66,14 +75,13 @@ namespace NextOpeningVisitors
             int day = StoreStation.Instance.dayCounter;
             bool created = _state!.BeginDay(day, store.secData.evidenceLevel, service.cost);
             SaveState();
+            NextOpeningVisitorsMod.Log?.Log(
+                $"Automatic evidence cleanup daily check: trigger={trigger}, day={day}, evidence={store.secData.evidenceLevel}, pending={_state.HasPendingOffer}, lastOfferDay={_state.LastOfferDay}, created={created}.");
             if (created)
             {
                 NextOpeningVisitorsMod.Log?.Log(
                     $"Automatic evidence cleanup offer created: day={day}, price={_state.OfferPrice}.");
             }
-            _presentedOfferDay = -1;
-            EnsureHost();
-            ArmIfPending();
         }
 
         internal static void Shutdown()
@@ -97,6 +105,7 @@ namespace NextOpeningVisitors
                 cooldownCurrent = 0,
                 cooldownDuration = 0,
                 source = Source,
+                subtitle = "Informant",
                 iconKey = NetworkUpgrade.EVIDENCE_REMOVAL,
                 titleProvider = () => CrimeForecastLocalization.Get(
                     CrimeForecastLocalization.ServiceTitle, LocHelper.GetCurrentLocaleCode()),
@@ -251,8 +260,12 @@ namespace NextOpeningVisitors
                 CrimeForecastLocalization.Get(CrimeForecastLocalization.Decline, locale));
 
             var offer = new Dialogue().SetText(wildName,
-                CrimeForecastLocalization.Get(CrimeForecastLocalization.CallOffer, locale, lockedPrice));
-            offer.AddChoice(DirectoryMaster.Item("$"), "", "", acceptChoice, () =>
+                CrimeForecastLocalization.Get(CrimeForecastLocalization.CallOffer, locale));
+            Dialogue priceLine = offer.NextDialogue().SetText(wildName,
+                CrimeForecastLocalization.Get(CrimeForecastLocalization.CallOfferPrice, locale, lockedPrice));
+            Dialogue terms = priceLine.NextDialogue().SetText(wildName,
+                CrimeForecastLocalization.Get(CrimeForecastLocalization.CallOfferTerms, locale));
+            terms.AddChoice(DirectoryMaster.Item("$"), "", "", acceptChoice, () =>
             {
                 if (choiceResolved) return;
                 choiceResolved = true;
@@ -262,7 +275,7 @@ namespace NextOpeningVisitors
                     : message;
                 SetResult(acceptChoice, wildName, result);
             });
-            offer.AddChoice(DirectoryMaster.Item("$"), "", "", declineChoice, () =>
+            terms.AddChoice(DirectoryMaster.Item("$"), "", "", declineChoice, () =>
             {
                 if (choiceResolved) return;
                 choiceResolved = true;

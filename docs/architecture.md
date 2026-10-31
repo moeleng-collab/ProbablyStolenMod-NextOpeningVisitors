@@ -82,7 +82,7 @@ IMod：NextOpeningVisitorsMod
 - `NegociationUIManager.RefreshNow` Postfix：读取当前客户和 `GetSellableItem()`，计算并刷新两行；
 - 异常：记录警告并调用 `Hide()`，不阻断原版交易。
 
-`TradeForecastUI` 保存当前 frame、原始信息区高度和分隔符状态。无可售物品时恢复原高度，不保留空白区域。
+`TradeForecastUI` 保存当前 frame、原始信息区高度和分隔符状态。无可售物品时恢复原高度，不保留空白区域。捕获基础高度时先检查信息区是否活动；原版零高度布局会隐藏容器但保留旧 `sizeDelta`，隐藏状态必须按 0 处理，避免重建时累加高度。
 
 ### 4.3 日终预测
 
@@ -93,10 +93,11 @@ IMod：NextOpeningVisitorsMod
 
 ### 4.4 自动电话
 
-- `ModHook.OnGameLoadedLate`：确保服务注册，读取当前 `PlayerStore.ModData()`，创建持久宿主并恢复 pending；
+- `ModHook.OnGameLoadedLate`：确保服务注册，读取当前 `PlayerStore.ModData()`，检查并补建当天报价，创建持久宿主并恢复 pending；
 - `ModHook.OnNewGameStarted`：确保新档服务与状态宿主；
-- `ModHook.OnWakingUpLate`：在原版新日调查结算后尝试创建当天报价；
-- `StorePhoneClient.GetCallDialog` Prefix：仅在展示本服务且目标为 Wild 时返回注入 `Dialogue`；
+- `ModHook.OnWakingUpLate`：在原版新日调查结算后尝试创建当天报价；读档与新日共用同一报价检查及每日去重规则；
+- `StorePhoneClient.GetCallDialog` Prefix：仅在展示本服务且目标为 Wild 时返回注入 `Dialogue`；报价正文通过两个 `NextDialogue()` 组成三段，价格仅在第二段格式化，选择项挂在第三段；
+- 分段推进复用原版 `DialoguePhoneUIManager` 与 `EmporiumOption.autoNextDialog`，不另设计时器，不自动执行接受或拒绝；
 - `PhoneUIManager.OpenUI` Postfix：若当天报价曾展示但仍 pending，且当前没有电话客户，则重新 arm，使玩家重开电话后可以再次展示；
 - `AutoEvidenceCallHost.Update`：累计到 0.75 秒后调用 `TryPresentPending()`，异常安全记录并等待后续重试。
 

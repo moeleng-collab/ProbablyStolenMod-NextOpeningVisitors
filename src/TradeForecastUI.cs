@@ -108,7 +108,8 @@ namespace NextOpeningVisitors
 
         private static void CaptureLayout(NegotiationTabletFrame frame)
         {
-            _baseInfoHeight = frame.infoHost.sizeDelta.y;
+            // Native zero-height layouts hide infoHost without clearing its previous sizeDelta.
+            _baseInfoHeight = frame.infoHost.gameObject.activeSelf ? frame.infoHost.sizeDelta.y : 0f;
             _baseSeparator = frame.separatorTop != null && frame.separatorTop.gameObject.activeSelf;
         }
 

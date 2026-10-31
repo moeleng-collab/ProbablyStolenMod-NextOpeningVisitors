@@ -323,7 +323,7 @@ SaveState();
 
 ## 9. 本地化、日志与失败策略
 
-`CrimeForecastLocalization` 含 17 类文本，复用 `ModLocalization.NormalizeLocale()`，支持：
+`CrimeForecastLocalization` 含 19 类文本，复用 `ModLocalization.NormalizeLocale()`，支持：
 
 ```text
 en, zh, ja, de, ru, fr, es, pl, ptBR, ko, it

@@ -373,6 +373,12 @@ internal static class RulesTests
         string fallback = CrimeForecastLocalization.Get(CrimeForecastLocalization.CallOffer, "nl", 1000);
         Assert(fallback == CrimeForecastLocalization.Get(CrimeForecastLocalization.CallOffer, "en", 1000),
             "Unsupported forecast locale uses English");
+        string intro = CrimeForecastLocalization.Get(CrimeForecastLocalization.CallOffer, "zh", 1000);
+        string price = CrimeForecastLocalization.Get(CrimeForecastLocalization.CallOfferPrice, "zh", 1000);
+        string terms = CrimeForecastLocalization.Get(CrimeForecastLocalization.CallOfferTerms, "zh", 1000);
+        Assert(intro != price && price != terms && intro != terms, "Automatic call body has three distinct pages");
+        Assert(!intro.Contains("1000") && price.Contains("1000") && !terms.Contains("1000"),
+            "Automatic call price appears only on the price page");
     }
 
     private static TradeForecastResult Trade(TradeItemForecastInput[] items, string faction = "",
