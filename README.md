@@ -31,7 +31,7 @@
 | [公共工程说明](docs/shared-engineering.md) | 三层架构、主线程、生命周期、构建与发布约束 |
 | [1.6.0 更新说明](docs/v1.6.0-update.md) | 高亮、自动鉴定与改造人检测的历史版本快照 |
 
-面向玩家的中英双语文案位于 `WORKSHOP_DESCRIPTION.md` 和 `WORKSHOP_DESCRIPTION_BBCode.txt`。1.5.0 已于 2026-11-01 更新到既有 [Steam 创意工坊项目](https://steamcommunity.com/sharedfiles/filedetails/?id=3829299781)（项目 ID：`3829299781`），公开可见；上传内容与更新日志已经远程核验。
+面向玩家的中英双语文案位于 `WORKSHOP_DESCRIPTION.md` 和 `WORKSHOP_DESCRIPTION_BBCode.txt`。1.6.0 已于 2026-11-02 更新到既有 [Steam 创意工坊项目](https://steamcommunity.com/sharedfiles/filedetails/?id=3829299781)（项目 ID：`3829299781`）；上传内容、更新日志和公开接口状态已经远程核验，页面仍显示“仅你可见”的社区审查提示，详见[发布记录](docs/validation/v1.6.0.md)。
 
 ## 运行与兼容环境
 
