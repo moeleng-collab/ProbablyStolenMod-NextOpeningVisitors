@@ -4,7 +4,7 @@
 
 **让供货商与奥丁在下一次开店时优先到访，并在承担罪案风险前看清可能的结果。**
 
-除了预约加速、去重和冷却清除，1.5.0 还新增交易案值预测、睡前调查预测，以及调查满值后的王哥自动来电服务。
+1.6.0 在预约、预测与王哥服务基础上，新增需求与盘查高亮、武器配件动态匹配、放大镜鉴定及身份提醒。
 
 ### 主要功能
 
@@ -53,6 +53,16 @@
 
 **自动清除只重置调查进度和案件状态，不会抹除案值、取消既有调查流程或撤回已派遣治安官，也不是永久免于判决。**
 
+#### 需求、盘查与武器配件高亮
+
+- 绿色标出顾客需求，黄色标出赃物，红色标出违禁品；支持箱内物品、垃圾桶和旋转物品。
+- 武器定制与改造订单会标出合适的基础武器及配件；条件达成后，相关配件提示自动撤除。
+
+#### 放大镜鉴定与身份提醒
+
+- 自动填入真实估值，并显示真伪原因、逐项价值或荧光莓品质；不会自动提交交易。
+- 改造体与通缉犯到店时直接提醒，显示真名、改造等级与举报奖励。
+
 #### 电话文案与 11 种语言
 
 订单、首次联系、免费样品和奥丁到访提示统一为“下一次开店”。新增预测、服务、电话与结果提示均支持游戏内 **11 种语言**。
@@ -74,7 +84,7 @@
 
 **Suppliers and Odin arrive first at your next opening, and new forecasts let you assess crime risks before committing.**
 
-Version 1.5.0 adds trade crime forecasts, nightly investigation forecasts, and an automatic paid cleanup call from Wild at 100 investigation, alongside the existing appointment and cooldown features.
+Version 1.6.0 adds demand and inspection highlights, dynamic weapon-mod matching, magnifier appraisals, and identity alerts alongside the existing appointment, forecast, and Wild service features.
 
 ### Features
 
@@ -122,6 +132,16 @@ When investigation reaches 100, Wild can call at the start of a new day, with at
 - Payment uses player cash only, never Wild Favor.
 
 **Cleanup resets only investigation progress and case state. It does not erase crime values, cancel existing investigation processes, or recall dispatched officers, and it is not permanent immunity from judgment.**
+
+#### Demand, Inspection and Weapon Highlights
+
+- Green marks demand, yellow stolen goods, and red contraband, including containers, trash and rotated items.
+- Gun orders highlight compatible weapons and mods, removing mod hints as requirements are met.
+
+#### Appraisal and Identity Alerts
+
+- The magnifier fills accurate values and shows authenticity, value breakdowns or Glowberry quality; it never submits for you.
+- Augmented and wanted visitors trigger name, augmentation-tier and bounty alerts.
 
 #### Dialogue and 11 Languages
 

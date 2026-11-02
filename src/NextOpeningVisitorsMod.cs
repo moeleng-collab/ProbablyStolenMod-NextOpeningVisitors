@@ -16,16 +16,20 @@ namespace NextOpeningVisitors
         {
             TradeForecastUI.SetEnabled(true);
             NightForecastUI.SetEnabled(true);
+            DemandHighlightUI.SetEnabled(true);
+            AppraisalAssistantUI.SetEnabled(true);
             ModHook.OnGameLoadedLate += AutoEvidenceCallController.OnGameLoaded;
             ModHook.OnNewGameStarted += HandleNewGame;
             ModHook.OnWakingUpLate += AutoEvidenceCallController.OnWakingUp;
-            Log?.Log("Initialized: Next Opening Visitors v1.5.0");
+            Log?.Log("Initialized: Next Opening Visitors v1.6.0");
         }
 
         public void OnDisable()
         {
             TradeForecastUI.SetEnabled(false);
             NightForecastUI.SetEnabled(false);
+            DemandHighlightUI.SetEnabled(false);
+            AppraisalAssistantUI.SetEnabled(false);
             ModHook.OnGameLoadedLate -= AutoEvidenceCallController.OnGameLoaded;
             ModHook.OnNewGameStarted -= HandleNewGame;
             ModHook.OnWakingUpLate -= AutoEvidenceCallController.OnWakingUp;

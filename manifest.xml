@@ -3,8 +3,8 @@
   <ID>nextopeningvisitors</ID>
   <Name>Next Opening: Suppliers &amp; Odin</Name>
   <Author>NextOpeningVisitors</Author>
-  <ModVersion>1.5.0</ModVersion>
-  <Description>中文：供货商与奥丁下一次开店优先到访，支持预约去重和冷却清除；新增交易案值预测、睡前调查预测，以及调查达到 100 后王哥自动来电的付费清除服务。预测只读；自动清除保留案值与已派遣治安官。&#10;English: Suppliers and Odin arrive first at your next opening, with appointment deduplication and cooldown clearing. Adds read-only trade crime forecasts, nightly investigation forecasts, and Wild's paid automatic cleanup call at 100 investigation. Cleanup preserves crime values and dispatched officers.</Description>
+  <ModVersion>1.6.0</ModVersion>
+  <Description>中文：供货商与奥丁下一次开店优先到访，支持预约去重和冷却清除；提供交易与夜间调查预测、调查满值后的自动清除来电，并新增顾客需求／治安盘查递归高亮、放大镜自动鉴定及改造人检测理由。&#10;English: Next-opening supplier and Odin visits, crime and investigation forecasts, automatic cleanup calls, recursive demand and inspection highlights, automatic appraisal estimates, and augmented-human detection with reasons.</Description>
   <GameVersions>
     <Version>0.46D</Version>
   </GameVersions>

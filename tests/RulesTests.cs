@@ -25,7 +25,10 @@ internal static class RulesTests
         TestAutomaticOfferPersistence();
         TestAutomaticAcceptanceRules();
         TestForecastLocalization();
-        Console.WriteLine($"PASS: {_assertions} assertions; visitor, forecast, automatic offer and localization rules verified.");
+        TestDemandHighlightRules();
+        TestAppraisalAssistantRules();
+        TestAssistantLocalization();
+        Console.WriteLine($"PASS: {_assertions} assertions; visitor, forecast, automatic offer, highlighting, appraisal and localization rules verified.");
     }
 
     private static void TestAllSupportedVisitors()
@@ -379,6 +382,207 @@ internal static class RulesTests
         Assert(intro != price && price != terms && intro != terms, "Automatic call body has three distinct pages");
         Assert(!intro.Contains("1000") && price.Contains("1000") && !terms.Contains("1000"),
             "Automatic call price appears only on the price page");
+    }
+
+    private static void TestDemandHighlightRules()
+    {
+        Assert(DemandHighlightRules.Classify(false, true, true) == DemandHighlightLevel.None,
+            "Unmatched flagged item is not highlighted");
+        Assert(DemandHighlightRules.Classify(true, false, false) == DemandHighlightLevel.Demand,
+            "Ordinary demand is green");
+        Assert(DemandHighlightRules.Classify(true, true, false) == DemandHighlightLevel.Stolen,
+            "Stolen demand is amber");
+        Assert(DemandHighlightRules.Classify(true, false, true) == DemandHighlightLevel.Contraband,
+            "Contraband demand is red");
+        Assert(DemandHighlightRules.Classify(true, true, true) == DemandHighlightLevel.Contraband,
+            "Contraband wins over stolen");
+        Assert(DemandHighlightRules.Merge(DemandHighlightLevel.Stolen, DemandHighlightLevel.Demand) == DemandHighlightLevel.Stolen,
+            "Nested stolen risk overrides ordinary demand");
+        Assert(DemandHighlightRules.Merge(DemandHighlightLevel.Contraband, DemandHighlightLevel.Stolen) == DemandHighlightLevel.Contraband,
+            "Nested contraband has highest priority");
+        Assert(DemandHighlightRules.Merge(DemandHighlightLevel.None, DemandHighlightLevel.Demand) == DemandHighlightLevel.Demand,
+            "Container inherits a matching child");
+        Assert(DemandHighlightRules.CanDescend(false, false, false, false), "Unlocked demand container can be searched");
+        Assert(!DemandHighlightRules.CanDescend(false, true, false, false), "Item behind a lock is not traversed");
+        Assert(!DemandHighlightRules.CanDescend(false, false, true, false), "Locked demand container stops recursion");
+        Assert(DemandHighlightRules.CanDescend(false, false, false, true), "Search blocker does not hide ordinary demand");
+        Assert(!DemandHighlightRules.CanDescend(true, false, false, true), "Inspection search blocker stops recursion");
+        Assert(DemandHighlightRules.CanDescend(true, false, false, false), "Visible inspection container can be searched");
+        Assert(DemandHighlightRules.ShouldInspectTrash(true, false), "Normal inspection includes the trashcan root");
+        Assert(!DemandHighlightRules.ShouldInspectTrash(true, true), "Lazy inspector skips the trashcan like vanilla");
+        Assert(!DemandHighlightRules.ShouldInspectTrash(false, false), "Demand mode does not treat trash as a sales inventory");
+        Assert(DemandHighlightRules.IsGunsmithOrder(true, true),
+            "A gunsmith order enables weapon demand highlighting");
+        Assert(!DemandHighlightRules.IsGunsmithOrder(true, false),
+            "A gunsmith client without order data does not scan weapons");
+        Assert(!DemandHighlightRules.IsGunsmithOrder(false, true),
+            "Ordinary purchases do not use the gunsmith branch");
+        Assert(DemandHighlightRules.MatchesGunsmithWeapon(false, true, true),
+            "A normal custom order highlights an advanced gun with accepted caliber");
+        Assert(!DemandHighlightRules.MatchesGunsmithWeapon(false, true, false),
+            "A fixed caliber requirement rejects other calibers");
+        Assert(!DemandHighlightRules.MatchesGunsmithWeapon(false, false, true),
+            "Gunsmith orders do not highlight non-gun items");
+        Assert(!DemandHighlightRules.MatchesGunsmithWeapon(true, true, true),
+            "Service orders do not highlight unrelated player guns");
+        Assert(DemandHighlightRules.IsGunsmithRequirementPending(false),
+            "An unmet order requirement keeps its related parts highlighted");
+        Assert(!DemandHighlightRules.IsGunsmithRequirementPending(true),
+            "A met order requirement stops highlighting its related parts");
+        Assert(DemandHighlightRules.MatchesGunsmithStatPart(true, true, 5, 0),
+            "Positive percentage stats satisfy a higher-stat request");
+        Assert(DemandHighlightRules.MatchesGunsmithStatPart(true, true, 0, 2),
+            "Positive flat stats satisfy a higher-stat request");
+        Assert(!DemandHighlightRules.MatchesGunsmithStatPart(true, true, -5, 0),
+            "Negative stats do not satisfy a higher-stat request");
+        Assert(DemandHighlightRules.MatchesGunsmithStatPart(true, false, -5, 0),
+            "Negative percentage stats satisfy a lower-stat request");
+        Assert(DemandHighlightRules.MatchesGunsmithStatPart(true, false, 0, -2),
+            "Negative flat stats satisfy a lower-stat request");
+        Assert(!DemandHighlightRules.MatchesGunsmithStatPart(true, false, 5, 0),
+            "Positive stats do not satisfy a lower-stat request");
+        Assert(!DemandHighlightRules.MatchesGunsmithStatPart(false, true, 5, 0),
+            "Non-mod items never use the weapon-part branch");
+        Assert(DemandHighlightRules.MatchesGunsmithSizePart(true, true),
+            "Weapon mods contribute to a larger-size request");
+        Assert(!DemandHighlightRules.MatchesGunsmithSizePart(true, false),
+            "Weapon mods do not contribute to a smaller-size request");
+        Assert(DemandHighlightRules.MatchesGunsmithSuppressor(true, true, 2, 1),
+            "A proper suppressor satisfies a proper-suppressor request");
+        Assert(!DemandHighlightRules.MatchesGunsmithSuppressor(true, true, 1, 1),
+            "A makeshift suppressor does not satisfy a proper-suppressor request");
+        Assert(!DemandHighlightRules.MatchesGunsmithSuppressor(true, false, 2, 0),
+            "Non-suppressor mods do not satisfy a suppressor request");
+        Assert(DemandHighlightRules.MaximumDepth == 32, "Recursive traversal has a fixed depth limit");
+        Assert(DemandHighlightRules.BorderWidth(48) == 3f, "Border uses the thinner grid-relative width");
+        Assert(DemandHighlightRules.BorderWidth(64) == 4f, "Border scales with the native grid");
+        Assert(DemandHighlightRules.BorderWidth(8) == 1f, "Border never becomes thinner than one unit");
+    }
+
+    private static void TestAppraisalAssistantRules()
+    {
+        Assert(AppraisalAssistantRules.CanAutoFill(true, true, 125), "Valid appraisal service value can be filled");
+        Assert(!AppraisalAssistantRules.CanAutoFill(false, true, 125), "Non-appraisal customer is untouched");
+        Assert(!AppraisalAssistantRules.CanAutoFill(true, false, 125), "Non-appraisal item is untouched");
+        Assert(!AppraisalAssistantRules.CanAutoFill(true, true, 0), "Missing correct value preserves original estimate");
+        Assert(!AppraisalAssistantRules.CanAutoFill(true, true, -5), "Negative correct value preserves original estimate");
+
+        Assert(AppraisalAssistantRules.DetectAug(false, true, true, true, 4) == AugDetectionReason.None,
+            "Non-augmented customer never gets an aug reason");
+        Assert(AppraisalAssistantRules.DetectAug(true, true, true, false, 2) == AugDetectionReason.VisibleModifications,
+            "Visible portrait modifications are reported first");
+        Assert(AppraisalAssistantRules.DetectAug(true, false, true, false, 2) == AugDetectionReason.Freeze,
+            "Freeze tell is a detection reason");
+        Assert(AppraisalAssistantRules.DetectAug(true, false, false, true, 2) == AugDetectionReason.Seizure,
+            "Seizure tell is a detection reason");
+        Assert(AppraisalAssistantRules.DetectAug(true, false, false, false, 4) == AugDetectionReason.SevereAnomaly,
+            "Tier-four anomaly is a detection reason");
+        Assert(AppraisalAssistantRules.DetectAug(true, false, false, false, 1) == AugDetectionReason.NoVisibleClue,
+            "Disguised aug does not invent a visible clue");
+        Assert(AppraisalAssistantRules.HasVisibleAugSprite("BM_Aug_01"), "Aug portrait is recognized case-insensitively");
+        Assert(AppraisalAssistantRules.HasVisibleAugSprite("cyber_lower_2"), "Cyber portrait is recognized");
+        Assert(AppraisalAssistantRules.HasVisibleAugSprite("android_upper_1"), "Android portrait is recognized");
+        Assert(!AppraisalAssistantRules.HasVisibleAugSprite("ordinary"), "Ordinary portrait is not an aug clue");
+        Assert(!AppraisalAssistantRules.HasVisibleAugSprite("laughing"), "Incidental aug letters are not an aug clue");
+        Assert(!AppraisalAssistantRules.HasVisibleAugSprite(null), "Missing portrait is not an aug clue");
+
+        Assert(AppraisalAssistantRules.ShouldAlertArrival(true, true, false), "Aug alert appears on arrival");
+        Assert(AppraisalAssistantRules.ShouldAlertArrival(true, false, true), "Wanted alert appears on arrival");
+        Assert(AppraisalAssistantRules.ShouldAlertArrival(true, true, true), "Combined customer alert appears on arrival");
+        Assert(!AppraisalAssistantRules.ShouldAlertArrival(false, true, true), "No arrival alert before the customer arrives");
+        Assert(!AppraisalAssistantRules.ShouldAlertArrival(true, false, false), "Ordinary customer has no arrival alert");
+
+        Assert(AppraisalAssistantRules.GetBerryQuality(-2, 0) == BerryQuality.Moldy, "Berry mold mapping");
+        Assert(AppraisalAssistantRules.GetBerryQuality(2, null) == BerryQuality.Small, "Small berry mapping");
+        Assert(AppraisalAssistantRules.GetBerryQuality(0, 0) == BerryQuality.Normal, "Normal berry mapping");
+        Assert(AppraisalAssistantRules.GetBerryQuality(1, 2) == BerryQuality.Normal, "Second normal berry mapping");
+        Assert(AppraisalAssistantRules.GetBerryQuality(-1, 0) == BerryQuality.Unripe, "First unripe berry variant");
+        Assert(AppraisalAssistantRules.GetBerryQuality(-1, 1) == BerryQuality.Unripe, "Second unripe berry variant");
+        Assert(AppraisalAssistantRules.GetBerryQuality(-1, 2) == BerryQuality.Dry, "Dry berry mapping");
+        Assert(AppraisalAssistantRules.GetBerryQuality(-1, null) == BerryQuality.Unknown, "Incomplete berry state stays unknown");
+        Assert(AppraisalAssistantRules.GetBerryQuality(9, 0) == BerryQuality.Unknown, "Unexpected berry state stays unknown");
+
+        AppraisalValueBreakdown? tactical = AppraisalAssistantRules.Hand(
+            "CARBON_COMPOSITE", "EMG_PLUS", "NONE", "ARMORED", "BLADED");
+        Assert(tactical != null && tactical.Total == 425 && tactical.MatchesNative(425),
+            "Tactical hand includes every component and set bonus");
+        AppraisalValueBreakdown? deluxeHand = AppraisalAssistantRules.Hand(
+            "GOLD_PLATED", "NEURAL", "NONE", "NONE", "NONE");
+        Assert(deluxeHand != null && deluxeHand.Total == 620, "Deluxe hand set bonus");
+        AppraisalValueBreakdown? minimumHand = AppraisalAssistantRules.Hand(
+            "ALUMINUM_ALLOY", "UNSPECIFIED", "DAMAGE", "NONE", "NONE");
+        Assert(minimumHand != null && minimumHand.Total == 50 && minimumHand.Subtotal < 50,
+            "Hand minimum value is enforced");
+        Assert(AppraisalAssistantRules.Hand("UNKNOWN", "EMG", "NONE", "NONE", "NONE") == null,
+            "Unknown hand material never produces a guessed breakdown");
+
+        AppraisalValueBreakdown? ignition = AppraisalAssistantRules.Plasma(
+            "NONE", "NONE", "NONE", "NONE", "HIGH_QUALITY", "IGNITION_LAB");
+        Assert(ignition != null && ignition.Total == 1200, "Ignition Lab plasma breakdown");
+        AppraisalValueBreakdown? wild = AppraisalAssistantRules.Plasma(
+            "NONE", "NONE", "NONE", "NONE", "POOR1", "LL");
+        Assert(wild != null && wild.Total == 210, "Wild bonus also applies to low-grade colors");
+        AppraisalValueBreakdown? minimumPlasma = AppraisalAssistantRules.Plasma(
+            "WEAR_HEAVY", "CRACK", "UNCOVERED", "NONE", "POOR1", "NONE");
+        Assert(minimumPlasma != null && minimumPlasma.Total == 90 && minimumPlasma.Subtotal < 90,
+            "Plasma minimum value is enforced");
+        Assert(AppraisalAssistantRules.Plasma("NONE", "NONE", "NONE", "NONE", "UNKNOWN", "NONE") == null,
+            "Unknown plasma color never produces a guessed breakdown");
+
+        AppraisalValueBreakdown? ribwich = AppraisalAssistantRules.Ribwich(
+            0, 1430, 1, 1, 1, 1, 425, 1, 0, -1, 0, 0);
+        Assert(ribwich != null && ribwich.Total == 1430 && ribwich.Lines.Count == 6,
+            "Ribwich authentic value includes meat, deluxe, date, run and facility components");
+        AppraisalValueBreakdown? opened = AppraisalAssistantRules.Ribwich(
+            1, 40, 0, 0, 0, 1, 425, 1, 0, -1, 0, 0);
+        Assert(opened != null && opened.Total == 40 && opened.FixedLabel == "value.opened",
+            "Opened Ribwich uses its fixed value");
+        AppraisalValueBreakdown? fake = AppraisalAssistantRules.Ribwich(
+            0, 40, 0, 0, 0, 1, 440, 1, 0, 0, 0, 0);
+        Assert(fake != null && fake.Total == 40 && fake.Reasons.Count == 1 &&
+            fake.Reasons[0].Label == "reason.invalidYear", "Counterfeit Ribwich explains its invalid year");
+        Assert(AppraisalAssistantRules.Ribwich(
+            0, 40, 0, 0, 0, 1, 425, 1, 0, -1, 0, 0) == null,
+            "Native counterfeit state without a detected reason is not explained by guesswork");
+    }
+
+    private static void TestAssistantLocalization()
+    {
+        string[] locales = { "en", "zh", "ja", "de", "ru", "fr", "es", "pl", "ptBR", "ko", "it" };
+        foreach (string locale in locales)
+        {
+            for (int key = 0; key < AssistantLocalization.KeyCount; key++)
+                Assert(!string.IsNullOrWhiteSpace(AssistantLocalization.Get(key, locale)),
+                    $"Assistant text {key} localized for {locale}");
+        }
+        Assert(AssistantLocalization.Get(AssistantLocalization.AugDetected, "nl") ==
+            AssistantLocalization.Get(AssistantLocalization.AugDetected, "en"),
+            "Unsupported assistant locale uses English");
+        Assert(AssistantLocalization.ReasonKey(AugDetectionReason.Freeze) == AssistantLocalization.Freeze,
+            "Freeze reason maps to its localized text");
+        Assert(AssistantLocalization.ReasonKey(AugDetectionReason.Seizure) == AssistantLocalization.Seizure,
+            "Seizure reason maps to its localized text");
+        Assert(AssistantLocalization.ReasonKey(AugDetectionReason.NoVisibleClue) == AssistantLocalization.NoVisibleClue,
+            "Hidden aug maps to the honest no-clue explanation");
+        Assert(AssistantLocalization.ReasonKey(AugDetectionReason.None) == AssistantLocalization.NoAug,
+            "Non-aug maps to the negative inspection result");
+        foreach (string locale in locales)
+        {
+            Assert(!string.IsNullOrWhiteSpace(AssistantAppraisalLocalization.Get("auth.counterfeit", locale)),
+                $"Authenticity result available for {locale}");
+            Assert(!string.IsNullOrWhiteSpace(AssistantAppraisalLocalization.Get("arrival.both", locale)),
+                $"Combined arrival alert available for {locale}");
+        }
+        Assert(AssistantAppraisalLocalization.Get("auth.genuine", "zh") == "真伪鉴定：正品。",
+            "Chinese genuine result is direct");
+        Assert(AssistantAppraisalLocalization.Berry(BerryQuality.Dry, "zh") == "干枯",
+            "Chinese berry quality is direct");
+        AppraisalValueBreakdown sample = AppraisalAssistantRules.Hand(
+            "CARBON_COMPOSITE", "EMG_PLUS", "NONE", "ARMORED", "BLADED")!;
+        string formula = AssistantAppraisalLocalization.FormatBreakdown(sample, "zh");
+        Assert(formula.Contains("基础 100") && formula.Contains("EMG+ 接口 45") &&
+            formula.Contains("刀刃组件 80") && formula.EndsWith("425"),
+            "Chinese value formula names and amounts every component");
     }
 
     private static TradeForecastResult Trade(TradeItemForecastInput[] items, string faction = "",

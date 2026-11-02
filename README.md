@@ -1,6 +1,6 @@
 # Next Opening: Suppliers & Odin
 
-《Probably Stolen》的本地／Steam Workshop Mod。当前代码版本为 **1.5.0**，目标游戏版本为 **0.46D**。
+《Probably Stolen》的本地／Steam Workshop Mod。当前代码版本为 **1.6.0**，目标游戏版本为 **0.46D**。
 
 ## 当前功能
 
@@ -11,23 +11,27 @@
 - 在交易平板显示当前调查进度，以及当前案值、成交后案值和本次新增案值；
 - 在日终平板根据当前收尾人选择预测夜间案值、调查增量和次日调查进度；
 - 调查达到 100 后，由王哥自动来电提供付费清除服务；
-- 上述新增界面、电话与提示支持游戏内 11 种语言。
+- 递归高亮顾客需要的物品及治安盘查可发现的物品：绿色为普通需求、黄色为赃物、红色为违禁品；
+- 武器定制与改造订单高亮合适的基础武器和配件，并按当前订单进度撤掉已达成条件的配件提示；
+- 鉴定服务使用放大镜查看物品时自动填入真实估值，但不会自动提交；
+- 放大镜显示注射器、香烟、食品券与肋明治的真伪原因，机械手、肋明治、燃料匣的逐项价值，以及荧光莓品质；
+- 放大镜模式检测改造人并显示理由；改造体或通缉犯到店时无需放大镜即显示身份、真名、改造等级与举报奖励；
+- 上述新增界面、电话与提示接入游戏语言设置，新增鉴定详情提供中文及英文回退。
 
-预测只读取当前状态，不执行交易或夜间结算。自动清除只重置调查进度与案件状态，**不会清除案值、取消既有调查流程或移除已派遣治安官**，也不消耗 Wild Favor。
+预测只读取当前状态，不执行交易或夜间结算。自动清除只重置调查进度与案件状态，**不会清除案值、取消既有调查流程或移除已派遣治安官**，也不消耗 Wild Favor。高亮不移动物品或执行盘查；自动鉴定不会替玩家确认成交。
 
-> **验证边界：**1.5.0 已通过纯规则测试、编译与官方 Mod 扫描；真实游戏内 UI、电话、存档和禁用／重启用验收尚未执行，不能把自动化结果当作游戏内验收通过。
+> **验证边界：**当前自动化结果统一见[当前验证记录](docs/validation/current.md)。用户已确认库存香烟鉴定窗口可见；动态配件高亮、其他真实 UI、电话、存档和禁用／重启用仍待游戏内验收，不能把自动化结果当作完整验收通过。
 
 ## 文档导航
 
 | 文档 | 用途 |
 | --- | --- |
-| [现有功能行为规格](docs/behavior-spec.md) | 1.5.0 的触发条件、状态变化、边界与验收规则 |
-| [现有项目架构](docs/architecture.md) | 代码分层、补丁点、数据流、生命周期与构建结构 |
-| [测试说明](docs/testing.md) | 自动化结果、扫描、游戏内验收与发布检查 |
-| [1.5.0 更新说明](docs/v1.5.0-update.md) | 三项新功能的需求、公式、实现状态与验收标准 |
-| [技术手册](docs/technical-manual.md) | 原版罪案机制、当前实现、持久化与适配约束 |
+| [文档总索引](docs/README.md) | 按功能查询行为、实现、边界与验收，以及文档更新规则 |
+| [当前验证记录](docs/validation/current.md) | 当前自动化结果、全局未测项与发布检查 |
+| [公共工程说明](docs/shared-engineering.md) | 三层架构、主线程、生命周期、构建与发布约束 |
+| [1.6.0 更新说明](docs/v1.6.0-update.md) | 高亮、自动鉴定与改造人检测的历史版本快照 |
 
-面向玩家的中英双语文案位于 `WORKSHOP_DESCRIPTION.md` 和 `WORKSHOP_DESCRIPTION_BBCode.txt`。本版本未执行 Workshop 上传。
+面向玩家的中英双语文案位于 `WORKSHOP_DESCRIPTION.md` 和 `WORKSHOP_DESCRIPTION_BBCode.txt`。1.5.0 已于 2026-11-01 更新到既有 [Steam 创意工坊项目](https://steamcommunity.com/sharedfiles/filedetails/?id=3829299781)（项目 ID：`3829299781`），公开可见；上传内容与更新日志已经远程核验。
 
 ## 运行与兼容环境
 
@@ -59,9 +63,16 @@ NextOpeningVisitors/
 │  ├─ CrimeForecastModels.cs        # 交易与夜间预测输入／输出模型
 │  ├─ CrimeForecastRules.cs         # 纯案值与调查公式
 │  ├─ CrimeForecastAdapter.cs       # 当前游戏状态的只读快照适配
-│  ├─ CrimeForecastLocalization.cs  # 新功能 11 语文案
+│  ├─ CrimeForecastLocalization.cs  # 预测与自动服务 11 语文案
 │  ├─ TradeForecastUI.cs            # 交易预测 UI
 │  ├─ NightForecastUI.cs            # 日终预测 UI
+│  ├─ DemandHighlightRules.cs       # 高亮分类、风险优先级与递归边界
+│  ├─ DemandHighlightUI.cs          # 库存扫描、边框与低频刷新宿主
+│  ├─ AppraisalAssistantRules.cs    # 鉴定条件、价值公式、品质与提醒规则
+│  ├─ AppraisalItemDetails.cs       # 原版物品只读适配、真伪原因与价值对账
+│  ├─ AppraisalAssistantUI.cs       # 自动填值、物品详情与到店提醒
+│  ├─ AssistantLocalization.cs      # 检测提示 11 语文案
+│  ├─ AssistantAppraisalLocalization.cs # 鉴定与身份提醒文本
 │  ├─ AutoEvidenceCallState.cs      # 报价状态、序列化与接受校验
 │  └─ AutoEvidenceCallController.cs # 服务注册、自动来电、支付与清理
 ├─ Properties/AssemblyInfo.cs       # 程序集版本与目标框架
@@ -96,27 +107,15 @@ python Modding/NextOpeningVisitors/run_scan.py
 
 也可以在本 Mod 目录分别执行 `python run_tests.py`、`python build.py` 和 `python run_scan.py`。
 
-当前结果：
-
-```text
-PASS: 818 assertions; visitor, forecast, automatic offer and localization rules verified.
-Error: <none>
-Refused: False
-MethodsScanned: 160
-Capabilities: <none>
-HardFlags: 0
-Findings: 0
-```
-
-`build.py` 会编译全部 `src/*.cs` 与程序集信息，生成 DLL 和便携 PDB，再把 DLL 与清单安装到 `Mods/NextOpeningVisitors/`。它不会自动更新 `release/`，也不会上传 Workshop。扫描通过不等于游戏内行为正确，仍须执行[游戏内验收](docs/testing.md#5-游戏内验收)。
+当前断言数、构建和扫描结果不在此重复维护，统一见[当前验证记录](docs/validation/current.md)。`build.py` 会编译全部 `src/*.cs` 与程序集信息，生成 DLL 和便携 PDB，再把 DLL 与清单安装到 `Mods/NextOpeningVisitors/`。它不会自动更新 `release/`，也不会上传 Workshop。扫描通过不等于游戏内行为正确，仍须执行[全局游戏内验收](docs/validation/current.md#4-全局游戏内验收)及各功能手册中的专项验收。
 
 本地启用时，在游戏的 Mod 管理界面检查并启用 Mod，按提示重启。需要区分：
 
 - **已发现**：加载器识别到清单；
 - **已启用**：玩家允许加载；
-- **已初始化**：日志出现 `Initialized: Next Opening Visitors v1.5.0`。
+- **已初始化**：日志出现 `Initialized: Next Opening Visitors v1.6.0`。
 
-游戏内 F8 可查看 Mod／调试日志，程序集或初始化错误还应检查 `Player.log`。当前尚未取得 1.5.0 的真实加载与初始化验收记录。
+游戏内 F8 可查看 Mod／调试日志，程序集或初始化错误还应检查 `Player.log`。当前尚未取得 1.6.0 的真实加载与初始化验收记录。测试高亮和鉴定前，应停用 `ClientDemandHighlight` 与 `AppraisalAssistant` 并重启，避免同功能 Mod 重复注入。
 
 ## 手动发布
 
@@ -136,14 +135,14 @@ NextOpeningVisitors/
 2. `Properties/AssemblyInfo.cs` 的程序集版本；
 3. `NextOpeningVisitorsMod.cs` 的初始化日志版本；
 4. Workshop 功能与兼容性说明；
-5. 行为规格、测试记录和技术文档；
+5. 受影响的功能手册与当前验证记录；
 6. `release/NextOpeningVisitors/` 中的清单和 DLL。
 
 保持 `manifest.xml` 的 `ID` 为 `nextopeningvisitors`，不要因版本更新更换 Mod 身份或新建重复 Workshop 项目。
 
 ## 禁用、存档与故障回退
 
-`OnDisable()` 会退订 1.5.0 使用的游戏事件，销毁自动电话持久宿主，注销自定义服务，并清理预测 UI。禁用后的预测刷新只恢复布局，不再创建文本。Harmony 补丁和既有电话按钮仍由游戏加载环境管理，禁用／启用验收应按加载器要求重启，不能假设所有运行时修改都会即时撤销。
+`OnDisable()` 会退订游戏事件，销毁自动电话与高亮持久宿主，注销自定义服务，并清理预测、高亮和放大镜 UI。禁用后的补丁不再创建文本、边框或自动填值。Harmony 补丁和既有电话按钮仍由游戏加载环境管理，禁用／启用验收应按加载器要求重启，不能假设所有运行时修改都会即时撤销。
 
 预测失败会隐藏新增内容并尽量恢复原版布局；队列补丁失败会保留原版调度；自动来电展示失败不扣款、不清调查、不涨价。接受操作会重新校验报价、日期、调查和现金，并在异常时尝试回滚本次现金、调查、案件状态、价格与报价状态修改。
 
