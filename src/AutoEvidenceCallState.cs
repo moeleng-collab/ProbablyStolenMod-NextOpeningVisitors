@@ -60,14 +60,12 @@ namespace NextOpeningVisitors
 
         internal string Serialize()
         {
-            return string.Join("|", new[]
-            {
+            return string.Join("|",
                 SchemaVersion.ToString(CultureInfo.InvariantCulture),
                 LastOfferDay.ToString(CultureInfo.InvariantCulture),
                 HasPendingOffer ? "1" : "0",
                 OfferPrice.ToString(CultureInfo.InvariantCulture),
-                OfferDay.ToString(CultureInfo.InvariantCulture)
-            });
+                OfferDay.ToString(CultureInfo.InvariantCulture));
         }
 
         internal static bool TryDeserialize(string serialized, out AutoEvidenceCallState state)

@@ -43,7 +43,15 @@ namespace NextOpeningVisitors
         private static void Plasma(InspectionUIManager __instance, GameItem gameItem) => Show(__instance, gameItem);
 
         [HarmonyPostfix, HarmonyPatch(nameof(InspectionUIManager.HandleInsBerry))]
-        private static void Berry(InspectionUIManager __instance, GameItem gameItem) => Show(__instance, gameItem);
+        private static void Berry(InspectionUIManager __instance, GameItem gameItem)
+        {
+            try { BerryQualityUI.MarkAppraised(gameItem); }
+            catch (Exception exception)
+            {
+                NextOpeningVisitorsMod.Log?.Warning("Could not record the glowberry appraisal. " + exception.Message);
+            }
+            Show(__instance, gameItem);
+        }
 
         private static void Show(InspectionUIManager manager, GameItem item)
         {
@@ -85,21 +93,24 @@ namespace NextOpeningVisitors
     internal static class AppraisalAssistantUI
     {
         private static TreeNodeRender? _panel;
-        private static TreeNodeRender? _textNode;
         private static CustomUIWindow? _itemWindow;
-        private static TextMeshProUGUI? _itemText;
-        private static TreeNodeRender? _arrivalPanel;
-        private static TreeNodeRender? _arrivalText;
+        private static CustomUIWindow? _arrivalWindow;
+        private static string? _arrivalDiagnosticKey;
+        private static readonly ArrivalAlertSession ArrivalSession = new ArrivalAlertSession();
         private static CustomerAlertHost? _host;
         private static bool _enabled;
 
         internal static void SetEnabled(bool enabled)
         {
             _enabled = enabled;
+            if (!FeatureSettings.IsEnabled(ModFeature.AppraisalDetails)) DestroyItemPanel();
+            if (!FeatureSettings.IsEnabled(ModFeature.MagnifierAugDetection)) DestroyPanel();
+            if (!FeatureSettings.IsEnabled(ModFeature.ArrivalIdentityAlert)) DestroyArrivalPanel();
             if (!enabled)
             {
                 if (_host != null) UnityEngine.Object.Destroy(_host.gameObject);
                 _host = null;
+                ArrivalSession.Reset();
                 DestroyPanel();
                 DestroyItemPanel();
                 DestroyArrivalPanel();
@@ -110,7 +121,8 @@ namespace NextOpeningVisitors
 
         internal static void AutoFill(InspectionUIManager manager, GameItem? item)
         {
-            if (!_enabled || manager == null || item == null || manager.apprisalServiceInputField == null) return;
+            if (!_enabled || !FeatureSettings.IsEnabled(ModFeature.AutomaticAppraisalValue) ||
+                manager == null || item == null || manager.apprisalServiceInputField == null) return;
             StoreClient? client = PlayerStore.Instance?.currentClientInstance?.GetClientBlueprint();
             if (client == null) return;
 
@@ -129,7 +141,8 @@ namespace NextOpeningVisitors
         internal static void ShowItemDetails(InspectionUIManager manager, GameItem? item)
         {
             DestroyItemPanel();
-            if (!_enabled || manager == null || manager.panel == null || item == null) return;
+            if (!_enabled || !FeatureSettings.IsEnabled(ModFeature.AppraisalDetails) ||
+                manager == null || manager.panel == null || item == null) return;
             string locale = LocHelper.GetCurrentLocaleCode();
             string text = AppraisalItemDetails.Build(item, locale);
             if (text.Length == 0)
@@ -144,7 +157,8 @@ namespace NextOpeningVisitors
         internal static void OnEnterMagnifying(StoreUIManager manager)
         {
             DestroyPanel();
-            if (!_enabled || manager == null || manager.magnifyingScreen == null || manager.isShootingMode) return;
+            if (!_enabled || !FeatureSettings.IsEnabled(ModFeature.MagnifierAugDetection) ||
+                manager == null || manager.magnifyingScreen == null || manager.isShootingMode) return;
             StoreClient? client = PlayerStore.Instance?.currentClientInstance?.GetClientBlueprint();
             if (client == null) return;
 
@@ -160,22 +174,31 @@ namespace NextOpeningVisitors
                 text += "\n" + AssistantLocalization.Get(AssistantLocalization.ReasonKey(reason), locale);
             CreateTextPanel(manager.magnifyingScreen.transform, "AugDetection", new Vector2(0.5f, 0f),
                 new Vector2(0f, 26f), new Vector2(720f, 92f), 20f, TextAlignmentOptions.Center,
-                out _panel, out _textNode);
-            if (_textNode?.text == null) return;
-            _textNode.text.text = text;
-            _textNode.text.color = reason == AugDetectionReason.None
+                out _panel, out TreeNodeRender textNode);
+            if (textNode?.text == null) return;
+            textNode.text.text = text;
+            textNode.text.color = reason == AugDetectionReason.None
                 ? new Color32(152, 220, 164, 255)
                 : new Color32(245, 184, 65, 255);
         }
 
         internal static void RefreshArrivalAlert()
         {
-            if (!_enabled) return;
+            if (!_enabled || !FeatureSettings.IsEnabled(ModFeature.ArrivalIdentityAlert))
+            {
+                DestroyArrivalPanel();
+                return;
+            }
             PlayerStore? store = PlayerStore.HasInstance ? PlayerStore.Instance : null;
-            StoreClient? client = store != null && store.isClientArrived && store.currentClientInstance != null
-                ? store.currentClientInstance.GetClientBlueprint() : null;
-            if (client == null || !AppraisalAssistantRules.ShouldAlertArrival(store != null && store.isClientArrived,
-                client.isAug, client.isWanted) || RenderHandler.current == null || RenderHandler.current.overlayRoot == null)
+            bool arrived = store != null && store.isClientArrived && store.currentClientInstance != null;
+            StoreClientInstance? customer = arrived && store != null ? store.currentClientInstance : null;
+            StoreClient? client = customer?.GetClientBlueprint();
+            bool uiReady = CustomUIManager.Instance != null;
+            bool eligible = client != null && AppraisalAssistantRules.ShouldAlertArrival(
+                arrived, client.isAug, client.isWanted);
+            bool shouldShow = ArrivalSession.ShouldShow(arrived, customer, eligible, uiReady);
+            LogArrivalState(arrived, client, uiReady);
+            if (!shouldShow || client == null)
             {
                 DestroyArrivalPanel();
                 return;
@@ -189,11 +212,85 @@ namespace NextOpeningVisitors
             if (client.isAug) AppendAlertLine(text, "arrival.tier", locale, client.augTier.ToString(CultureInfo.InvariantCulture));
             if (client.isWanted) AppendAlertLine(text, "arrival.reward", locale, client.reportReward.ToString(CultureInfo.InvariantCulture));
 
-            if (_arrivalPanel == null || _arrivalText == null)
-                CreateTextPanel(RenderHandler.current.overlayRoot.transform, "CustomerAlert", new Vector2(0.5f, 1f),
-                    new Vector2(0f, -24f), new Vector2(600f, 170f), 20f, TextAlignmentOptions.TopLeft,
-                    out _arrivalPanel, out _arrivalText);
-            if (_arrivalText?.text != null) _arrivalText.text.text = text.ToString();
+            if (_arrivalWindow == null || !_arrivalWindow.IsAlive)
+            {
+                CreateArrivalWindow(text.ToString(), locale, customer!);
+                return;
+            }
+
+            _arrivalWindow.SetTitle(ArrivalWindowTitle(locale));
+            CustomUIElement? element = _arrivalWindow.Get("details");
+            if (element?.text == null) return;
+            element.text.text = text.ToString();
+            ApplyItemFont(element.text, locale);
+        }
+
+        private static void LogArrivalState(bool arrived, StoreClient? client, bool uiReady)
+        {
+            string key = arrived.ToString(CultureInfo.InvariantCulture) + "|" + uiReady.ToString(CultureInfo.InvariantCulture);
+            if (client != null)
+                key += "|" + client.identifier + "|" + client.isAug + "|" + client.augTier + "|" + client.isWanted;
+            if (key == _arrivalDiagnosticKey) return;
+            _arrivalDiagnosticKey = key;
+            NextOpeningVisitorsMod.Log?.Log("Customer alert state: arrived=" + arrived +
+                ", client=" + (client == null ? "none" : Safe(client.displayName)) +
+                ", isAug=" + (client != null && client.isAug) +
+                ", augTier=" + (client == null ? "—" : client.augTier.ToString(CultureInfo.InvariantCulture)) +
+                ", isWanted=" + (client != null && client.isWanted) +
+                ", nativeUIReady=" + uiReady);
+        }
+
+        private static string ArrivalWindowTitle(string locale) =>
+            AssistantAppraisalLocalization.Get("title.arrival", locale);
+
+        private static void CreateArrivalWindow(string text, string locale, StoreClientInstance customer)
+        {
+            if (CustomUIManager.Instance == null)
+                throw new InvalidOperationException("The native custom UI manager is not ready.");
+
+            CustomUIBuilder builder = CustomUIManager.Window(
+                "nextopeningvisitors.customer_alert", ArrivalWindowTitle(locale), "overlay");
+            CustomUIWindow window = builder.Handle;
+            _arrivalWindow = window;
+            window.onClose = () => DismissArrivalAlert(customer);
+            builder.SetSize(480f, 210f)
+                .SetPosition(new Vector2(0f, 320f))
+                .SetDraggable(true)
+                .SetCloseOnEscape(false)
+                .Show();
+
+            builder.AddLabel(text, "details");
+            CustomUIElement element = window.Get("details");
+            if (element == null || element.text == null)
+                throw new InvalidOperationException("The native customer alert label could not be created.");
+
+            TextMeshProUGUI label = element.text;
+            ApplyItemFont(label, locale);
+            if (window.frame != null && window.frame.titleText != null)
+                ApplyItemFont(window.frame.titleText, locale);
+            label.enableAutoSizing = false;
+            label.fontSize = 20f;
+            label.enableWordWrapping = true;
+            label.alignment = TextAlignmentOptions.TopLeft;
+            label.raycastTarget = false;
+            element.SetPreferredSize(438f, 150f);
+            CustomUIBuilder.RebuildLayout(window.Rect);
+            window.SetSize(480f, 210f);
+            window.Show();
+            label.ForceMeshUpdate();
+
+            NextOpeningVisitorsMod.Log?.Log("Customer alert window: alive=" + window.IsAlive +
+                ", visible=" + window.IsVisible +
+                ", rect=" + window.Rect.rect +
+                ", renderedChars=" + label.textInfo.characterCount +
+                ", font=" + (label.font != null ? label.font.name : "none"));
+        }
+
+        private static void DismissArrivalAlert(StoreClientInstance customer)
+        {
+            if (!ArrivalSession.Dismiss(customer)) return;
+            if (_arrivalWindow != null) _arrivalWindow.onClose = null;
+            _arrivalWindow = null;
         }
 
         private static void AppendAlertLine(StringBuilder text, string key, string locale, string value)
@@ -203,7 +300,8 @@ namespace NextOpeningVisitors
 
         private static string Safe(string? value)
         {
-            return string.IsNullOrWhiteSpace(value) ? "—" : value!.Replace('<', '‹').Replace('>', '›').Trim();
+            if (value == null || string.IsNullOrWhiteSpace(value)) return "—";
+            return value.Replace('<', '‹').Replace('>', '›').Trim();
         }
 
         private static void EnsureHost()
@@ -252,7 +350,7 @@ namespace NextOpeningVisitors
             if (CustomUIManager.Instance == null)
                 throw new InvalidOperationException("The native custom UI manager is not ready.");
 
-            string title = locale.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "鉴定详情" : "Appraisal Details";
+            string title = AssistantAppraisalLocalization.Get("title.appraisal", locale);
             CustomUIBuilder builder = CustomUIManager.Window("nextopeningvisitors.item_appraisal", title, "overlay");
             CustomUIWindow window = builder.Handle;
             _itemWindow = window;
@@ -268,7 +366,6 @@ namespace NextOpeningVisitors
                 throw new InvalidOperationException("The native appraisal label could not be created.");
 
             TextMeshProUGUI label = element.text;
-            _itemText = label;
             ApplyItemFont(label, locale);
             if (window.frame != null && window.frame.titleText != null)
                 ApplyItemFont(window.frame.titleText, locale);
@@ -305,18 +402,23 @@ namespace NextOpeningVisitors
             if (font != null) text.font = font;
         }
 
+        internal static void ApplyItemFontToWindow(CustomUIWindow? window, string locale)
+        {
+            if (window?.root == null) return;
+            foreach (Component component in window.root.GetComponentsInChildren(typeof(TextMeshProUGUI), true))
+                if (component is TextMeshProUGUI text) ApplyItemFont(text, locale);
+        }
+
         internal static void DestroyPanel()
         {
             if (_panel != null) UnityEngine.Object.Destroy(_panel.gameObject);
             _panel = null;
-            _textNode = null;
         }
 
         internal static void DestroyItemPanel()
         {
             CustomUIWindow? window = _itemWindow;
             _itemWindow = null;
-            _itemText = null;
             if (window == null) return;
             try
             {
@@ -331,9 +433,18 @@ namespace NextOpeningVisitors
 
         private static void DestroyArrivalPanel()
         {
-            if (_arrivalPanel != null) UnityEngine.Object.Destroy(_arrivalPanel.gameObject);
-            _arrivalPanel = null;
-            _arrivalText = null;
+            CustomUIWindow? window = _arrivalWindow;
+            _arrivalWindow = null;
+            if (window == null) return;
+            try
+            {
+                window.onClose = null;
+                if (window.IsAlive) window.Close();
+            }
+            catch (Exception exception)
+            {
+                NextOpeningVisitorsMod.Log?.Warning("Could not close the customer arrival alert. " + exception.Message);
+            }
         }
     }
 

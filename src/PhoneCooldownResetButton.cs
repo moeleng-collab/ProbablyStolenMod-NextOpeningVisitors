@@ -10,9 +10,33 @@ namespace NextOpeningVisitors
     internal static class PhoneCooldownResetButton
     {
         private const string ButtonObjectName = "NextOpeningVisitors.ResetCooldownButton";
+        private static bool _enabled;
+
+        internal static void SetEnabled(bool enabled)
+        {
+            _enabled = enabled;
+            PhoneUIManager? phone = PhoneUIManager.Instance;
+            if (phone?.numberDisplay == null) return;
+            Transform? parent = phone.numberDisplay.rectTransform.parent;
+            Transform? oldButton = parent == null ? null : parent.Find(ButtonObjectName);
+            if (enabled)
+            {
+                if (oldButton == null && phone.phoneBookUIManager != null)
+                {
+                    try { AddButton(phone, phone.phoneBookUIManager); }
+                    catch (Exception exception)
+                    {
+                        NextOpeningVisitorsMod.Log?.Warning("Could not restore the phone cooldown button. " + exception.Message);
+                    }
+                }
+                return;
+            }
+            if (oldButton != null) UnityEngine.Object.Destroy(oldButton.gameObject);
+        }
 
         private static void Postfix(PhoneUIManager __instance)
         {
+            if (!_enabled) return;
             try
             {
                 if (__instance.phoneBookUIManager == null || __instance.numberDisplay == null)
@@ -81,14 +105,15 @@ namespace NextOpeningVisitors
             Navigation navigation = button.navigation;
             navigation.mode = Navigation.Mode.None;
             button.navigation = navigation;
-            button.onClick.AddListener(() => ResetCooldowns(phone, book));
+            button.onClick.AddListener(() => ResetCooldowns(book));
 
             phone.gameObject.AddComponent<PhoneCooldownResetButtonVisibility>().Configure(instance, phone.numberDisplay);
             NextOpeningVisitorsMod.Log?.Log($"Cooldown button UI: active={instance.activeInHierarchy}, text='{label.text}', chars={label.textInfo.characterCount}, font={label.font?.name}, color={label.color}, rect={rect.rect}.");
         }
 
-        private static void ResetCooldowns(PhoneUIManager phone, PhoneBookUIManager book)
+        private static void ResetCooldowns(PhoneBookUIManager book)
         {
+            if (!_enabled) return;
             try
             {
                 CooldownResetResult result = CooldownResetRules.ResetCooldowns(

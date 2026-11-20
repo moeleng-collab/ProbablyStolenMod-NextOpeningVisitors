@@ -21,8 +21,13 @@ args.extend([
     str(project / "src" / "CrimeForecastLocalization.cs"),
     str(project / "src" / "DemandHighlightRules.cs"),
     str(project / "src" / "AppraisalAssistantRules.cs"),
+    str(project / "src" / "BerryAppraisalState.cs"),
+    str(project / "src" / "FeatureSettingsState.cs"),
+    str(project / "src" / "FeatureSettingsLocalization.cs"),
     str(project / "src" / "AssistantLocalization.cs"),
     str(project / "src" / "AssistantAppraisalLocalization.cs"),
+    str(project / "src" / "NightOwlRules.cs"),
+    str(project / "src" / "NightOwlLocalization.cs"),
     str(tests / "RulesTests.cs"),
 ])
 subprocess.run(args, check=True, cwd=root)

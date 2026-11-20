@@ -4,6 +4,8 @@
 
 | 功能 | 当前行为规格 |
 | --- | --- |
+| 夜猫子开局特性与第三方外出地点兼容 | [夜猫子](features/night-owl.md) |
+| F8 功能列表与独立开关 | [功能开关](features/feature-settings.md) |
 | 下一次开店、预约去重与稳定置顶 | [访客调度](features/visitor-scheduling.md) |
 | 冷却清除与预约保护 | [电话冷却清除](features/phone-cooldown.md) |
 | 供货商与奥丁电话文案 | [电话本地化](features/phone-localization.md) |

@@ -1,6 +1,6 @@
 # NextOpeningVisitors 文档总索引
 
-- 当前代码版本：`1.6.0`
+- 当前代码版本：`1.7.0`
 - 目标游戏：《Probably Stolen》`0.46D`
 - 文档结构：按功能拆分当前事实，集中记录验证状态，保留历史版本快照
 
@@ -19,6 +19,8 @@
 
 | 功能 | 当前行为与实现 | 主要源码 |
 | --- | --- | --- |
+| 夜猫子开局特性与动态第三方地点兼容 | [夜猫子](features/night-owl.md) | `NightOwlRules.cs`、`NightOwlController.cs`、`NightOwlLocalization.cs` |
+| F8 功能列表与 13 项独立开关 | [功能开关](features/feature-settings.md) | `FeatureSettingsState.cs`、`FeatureSettings.cs`、`FeatureSettingsUI.cs` |
 | 下一次开店到访、预约去重与稳定置顶 | [访客调度](features/visitor-scheduling.md) | `VisitorRules.cs`、`NextOpeningVisitorsMod.cs` |
 | 五位联系人冷却清除与预约保护 | [电话冷却清除](features/phone-cooldown.md) | `CooldownResetRules.cs`、`PhoneCooldownResetButton.cs` |
 | 供货商与奥丁电话文案及语言回退 | [电话本地化](features/phone-localization.md) | `PhoneDialogueTextRules.cs`、`PhoneDialogueTextPatch.cs` |
@@ -35,7 +37,9 @@
 
 - [公共工程说明](shared-engineering.md)：事实源、三层架构、主线程、生命周期、构建、禁用、发布包与兼容约束。
 - [当前验证记录](validation/current.md)：当前版本的规则测试、构建、扫描、全局游戏内未测项和发布记录模板。
-- [1.6.0 发布记录](validation/v1.6.0.md)：封板提交、发布文件、游戏内证据边界与 Steam 远程核验状态。
+- [1.7.0 发布记录](validation/v1.7.0.md)：夜猫子功能、当前发布文件、远程描述核验与页面隐藏状态。
+- [1.6.2 发布记录](validation/v1.6.2.md)：历史发布文件、哈希、游戏内证据边界与 Steam 远程下载核验状态。
+- [1.6.0 发布记录](validation/v1.6.0.md)：历史封板提交、发布文件与当时的 Steam 远程核验状态。
 
 ## 旧手册入口
 

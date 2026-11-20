@@ -3,8 +3,8 @@
   <ID>nextopeningvisitors</ID>
   <Name>Next Opening: Suppliers &amp; Odin</Name>
   <Author>NextOpeningVisitors</Author>
-  <ModVersion>1.6.0</ModVersion>
-  <Description>中文：供货商与奥丁下一次开店优先到访，支持预约去重和冷却清除；提供交易与夜间调查预测、调查满值后的自动清除来电，并新增顾客需求／治安盘查递归高亮、放大镜自动鉴定及改造人检测理由。&#10;English: Next-opening supplier and Odin visits, crime and investigation forecasts, automatic cleanup calls, recursive demand and inspection highlights, automatic appraisal estimates, and augmented-human detection with reasons.</Description>
+  <ModVersion>1.7.0</ModVersion>
+  <Description>中文：下一次开店优先到访、预约去重与冷却清除；交易和调查预测、自动清除来电、物品高亮、放大镜鉴定、荧光莓品质标志及身份提醒。新增 2 点开局特性“夜猫子”：夜间不限外出次数，同一地点每晚一次，兼容其他 Mod 的原生外出地点。按 F8 打开 13 项独立功能开关。&#10;English: Next-opening visits, appointment deduplication, cooldown clearing, forecasts, cleanup calls, highlights, appraisals, Glowberry quality markers and identity alerts. New 2-point Night Owl perk: unlimited nightly outings, one visit per location per night, including locations from other mods using the native system. Press F8 for 13 independent feature toggles.</Description>
   <GameVersions>
     <Version>0.46D</Version>
   </GameVersions>

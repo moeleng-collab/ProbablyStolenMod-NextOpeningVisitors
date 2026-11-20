@@ -59,10 +59,13 @@ namespace NextOpeningVisitors
                 return;
             }
 
-            bool inspection = client.clientIntent == StoreClient.ClientIntent.INSPECTION;
-            bool gunsmith = DemandHighlightRules.IsGunsmithOrder(
-                client.clientIntent == StoreClient.ClientIntent.GUNSMITH, client.gunOrderData != null);
-            if (!inspection && !gunsmith && !client.IsClientBuying())
+            bool inspection = FeatureSettings.IsEnabled(ModFeature.SecurityInspectionHighlight) &&
+                client.clientIntent == StoreClient.ClientIntent.INSPECTION;
+            bool gunsmith = FeatureSettings.IsEnabled(ModFeature.GunsmithHighlight) &&
+                DemandHighlightRules.IsGunsmithOrder(
+                    client.clientIntent == StoreClient.ClientIntent.GUNSMITH, client.gunOrderData != null);
+            bool buying = FeatureSettings.IsEnabled(ModFeature.CustomerDemandHighlight) && client.IsClientBuying();
+            if (!inspection && !gunsmith && !buying)
             {
                 HideAll();
                 return;
@@ -304,16 +307,37 @@ namespace NextOpeningVisitors
     internal sealed class DemandHighlightHost : MonoBehaviour
     {
         private float _timer = 0.25f;
+        private string? _lastErrorSignature;
+        private int _suppressedRepeats;
 
         private void Update()
         {
             _timer += Time.deltaTime;
             if (_timer < 0.25f) return;
             _timer = 0f;
-            try { DemandHighlightUI.RefreshNow(); }
+            try
+            {
+                DemandHighlightUI.RefreshNow();
+                if (_lastErrorSignature != null)
+                {
+                    NextOpeningVisitorsMod.Log?.Log("Item highlight refresh recovered. Suppressed identical errors: " +
+                        _suppressedRepeats + ".");
+                    _lastErrorSignature = null;
+                    _suppressedRepeats = 0;
+                }
+            }
             catch (Exception exception)
             {
-                NextOpeningVisitorsMod.Log?.Warning("Could not refresh item highlights. " + exception.Message);
+                string signature = exception.GetType().FullName + "|" + exception.StackTrace;
+                if (signature == _lastErrorSignature)
+                {
+                    _suppressedRepeats++;
+                    return;
+                }
+                _lastErrorSignature = signature;
+                _suppressedRepeats = 0;
+                NextOpeningVisitorsMod.Log?.Warning("Could not refresh item highlights. " +
+                    "Identical errors will be suppressed until recovery or a stack change.\n" + exception);
             }
         }
     }
@@ -336,10 +360,14 @@ namespace NextOpeningVisitors
             if (level != DemandHighlightLevel.None) EnsureCreated();
             if (!_created) return;
 
+            // HideAll must also be safe during scene/UI transitions. Hiding a frame does not
+            // require a grid size, and UISettings.current is allowed to be unavailable here.
+            var settings = UISettings.current;
             Color color = GetColor(level);
-            float width = DemandHighlightRules.BorderWidth(UISettings.current.gridSize);
-            bool visible = level != DemandHighlightLevel.None && _element.unitCount > 0;
-            bool fakeVisible = visible && _element.fakeBackground != null && _element.fakeBackground.image.enabled;
+            float width = settings == null ? 1f : DemandHighlightRules.BorderWidth(settings.gridSize);
+            bool visible = settings != null && level != DemandHighlightLevel.None && _element.unitCount > 0;
+            bool fakeVisible = visible && _element.fakeBackground != null &&
+                _element.fakeBackground.image != null && _element.fakeBackground.image.enabled;
             for (int i = 0; i < 4; i++)
             {
                 ApplyNode(_real[i], color, width, visible);
@@ -349,7 +377,7 @@ namespace NextOpeningVisitors
 
         private void EnsureCreated()
         {
-            if (_created) return;
+            if (_created || _element.rotator == null || _element.fakeRotator == null) return;
             for (int i = 0; i < 4; i++)
             {
                 // Both placed items and drag previews rotate these nodes, so the frame follows them.
@@ -397,7 +425,7 @@ namespace NextOpeningVisitors
 
         private static void ApplyNode(TreeNodeRender node, Color color, float width, bool visible)
         {
-            if (node == null) return;
+            if (node == null || node.image == null || node.rectTransform == null) return;
             int edge = node.gameObject.name.EndsWith(".0", StringComparison.Ordinal) ? 0
                 : node.gameObject.name.EndsWith(".1", StringComparison.Ordinal) ? 1
                 : node.gameObject.name.EndsWith(".2", StringComparison.Ordinal) ? 2 : 3;

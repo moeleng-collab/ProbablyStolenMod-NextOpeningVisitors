@@ -41,14 +41,20 @@ namespace NextOpeningVisitors
             }
             else if (item.IsTag("BERRY_TAG"))
             {
-                int? condition = Number(item, "BERRY_CONDITION_INT");
-                BerryQuality quality = condition.HasValue
-                    ? AppraisalAssistantRules.GetBerryQuality(condition.Value, Number(item, "BERRY_VISUAL_VARIANT_INT"))
-                    : BerryQuality.Unknown;
+                BerryQuality quality = GetBerryQuality(item);
                 AppendLine(text, AssistantAppraisalLocalization.Get("quality.title", locale,
                     AssistantAppraisalLocalization.Berry(quality, locale)));
             }
             return text.ToString().TrimEnd();
+        }
+
+        internal static BerryQuality GetBerryQuality(GameItem item)
+        {
+            if (item == null || !item.IsTag("BERRY_TAG")) return BerryQuality.Unknown;
+            int? condition = Number(item, "BERRY_CONDITION_INT");
+            return condition.HasValue
+                ? AppraisalAssistantRules.GetBerryQuality(condition.Value, Number(item, "BERRY_VISUAL_VARIANT_INT"))
+                : BerryQuality.Unknown;
         }
 
         private static AppraisalValueBreakdown? Calculate(GameItem item, int nativeValue)
@@ -147,9 +153,9 @@ namespace NextOpeningVisitors
         private static string InjectorSerialReason(string? serial, out object? detail)
         {
             detail = null;
-            if (string.IsNullOrEmpty(serial) || serial!.Length != 7) return "reason.serialLength";
-            foreach (char character in serial!) if (character < '0' || character > '9') return "reason.serialLength";
-            int value = int.Parse(serial!, CultureInfo.InvariantCulture);
+            if (serial == null || serial.Length != 7) return "reason.serialLength";
+            foreach (char character in serial) if (character < '0' || character > '9') return "reason.serialLength";
+            int value = int.Parse(serial, CultureInfo.InvariantCulture);
             if (value < 1250000 || value > 4559999) return "reason.serialRange";
             int batch = value / 10000;
             if (batch == 250 || batch == 251 || batch == 301 || batch == 355 || batch == 385 || batch == 386 || batch == 421)

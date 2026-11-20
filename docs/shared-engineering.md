@@ -36,13 +36,16 @@
 `NextOpeningVisitorsMod` 负责：
 
 - `Init(ModManifest)`：创建 `ModLog`；
-- `OnEnable()`：启用预测、高亮、鉴定和检测 UI，订阅 `OnGameLoadedLate`、`OnNewGameStarted`、`OnWakingUpLate`，记录 `v1.6.0` 初始化日志；
-- `OnDisable()`：先禁用各 UI，再退订事件，关闭自动电话控制器并记录日志。
+- `OnEnable()`：注册“夜猫子”开局特性，启用 Mod 总开关并按当前设置启停各功能，订阅 `OnGameLoadedLate`、`OnNewGameStarted`、`OnWakingUpLate`，记录 `v1.7.0` 初始化日志；
+- `OnDisable()`：先停用并注销“夜猫子”，再使全部功能判断失效并清理各 UI、宿主和自动电话，随后退订事件并记录日志；
+- 读档与新档事件：加载对应存档的独立功能设置并应用，再恢复自动服务和荧光莓鉴定记录。“夜猫子”直接读取原生开局特性和地点状态，不另设读档恢复步骤。
 
 源码不自行调用 `Harmony.PatchAll()`，补丁激活由游戏 Mod 加载环境负责。完整禁用和重启用验收应按加载器要求重启，不能假设所有 Harmony 修改都会即时撤销。
 
 | 领域 | 目标／事件 | 功能手册 |
 | --- | --- | --- |
+| 夜猫子特性与外出 | `ModHelper.AddStartingPerk`、`StoreDoor.OnClick / GetTooltip`、`MapUIManager.Travel`、`TransitUI.BuildCard / Select` | [夜猫子](features/night-owl.md) |
+| F8 功能列表 | `FeatureSettingsInputHandler`、`InputActionManager`、原生滚动窗口与独立开关 | [功能开关](features/feature-settings.md) |
 | 访客队列 | `PlayerStore.HandleFutureClientQueue` Prefix／Postfix | [访客调度](features/visitor-scheduling.md) |
 | 电话冷却按钮 | `PhoneUIManager.OpenUI` Postfix | [电话冷却清除](features/phone-cooldown.md) |
 | 电话文案 | `LocHelper.GetLocalizedDialoguePhone` Postfix | [电话本地化](features/phone-localization.md) |
@@ -50,20 +53,22 @@
 | 日终预测 | `EndOfDayUIManager.InitUI / RefreshUI` | [夜间预测](features/night-forecast.md) |
 | 自动服务与电话 | 新日／读档事件、`StorePhoneClient.GetCallDialog`、持久宿主 | [自动证据清除](features/auto-evidence-cleanup.md) |
 | 物品高亮 | `GameItemElement.Validate`、`DemandHighlightHost.Update` | [需求与盘查高亮](features/demand-highlight.md) |
-| 自动鉴定 | `InspectionUIManager.OnInspectItem` Postfix | [自动鉴定](features/appraisal-assistant.md) |
+| 自动鉴定与荧光莓标志 | `InspectionUIManager.OnInspectItem / HandleInsBerry`、`GameItemElement.Validate`、读档／新档事件、`BerryQualityHost.Update` | [自动鉴定](features/appraisal-assistant.md) |
 | 改造人检测 | `StoreUIManager.Enter/ExitMagnifyingMode` Postfix | [改造人检测](features/aug-detection.md) |
 
 对称清理原则：
 
+- “夜猫子”禁用后注销本 Mod 的开局特性并停用补丁判断，不改写原生地点访问记录；
 - 预测 UI 禁用后恢复布局并销毁新增文本，后续补丁不得重新创建内容；
 - 高亮禁用后销毁持久宿主和全部边框；
-- 鉴定／检测禁用后销毁提示，后续补丁不再自动填值或创建 UI；
+- 鉴定／检测禁用后销毁提示，荧光莓标志禁用后销毁宿主和全部标志，后续补丁不再自动填值、记录鉴定或创建 UI；
 - 自动电话 `Shutdown()` 退订事件、清除内存状态和注入对话、销毁宿主，并调用 `RemoveModUpgrades(Source)`；
 - 既有电话按钮和 Harmony 反补丁不在当前版本额外重写，仍需真实禁用／重启用验收。
 
 ## 4. 公共本地化与失败策略
 
 支持语言：`en`、`zh`、`ja`、`de`、`ru`、`fr`、`es`、`pl`、`ptBR`、`ko`、`it`。语言规范化忽略 `-` 与 `_`，中文区域代码归入 `zh`，葡萄牙语归入 `ptBR`，未知语言回退英文。各功能的 key、参数和特殊回退规则记录在对应手册。
+鉴定详情、到店提醒和 F8 功能开关现已使用同一套 11 语表与回退规则。这些表是在 1.6.2 发布后于当前工作区补全的，尚未随 Workshop 更新发布，游戏内 11 语布局仍未验收。
 
 通用失败原则：
 
@@ -124,7 +129,7 @@ python Modding/NextOpeningVisitors/run_scan.py
 
 游戏内 F8 可查看 Mod／调试日志，程序集或初始化错误还应检查 `Player.log`。本地与 Workshop 不应同时加载两份副本。
 
-访客与冷却使用原版字段；自动服务另使用自定义 `NetworkUpgrade` 和 `PlayerStore.ModData()`，具体键见功能手册。高亮、预测、鉴定和改造人检测不新增存档数据。卸载 Mod 不会自动恢复已经写入存档的预约、冷却、现金或罪案字段，升级和回滚前应备份存档。
+访客与冷却使用原版字段；自动服务另使用自定义 `NetworkUpgrade` 和 `PlayerStore.ModData()`，具体键见功能手册。荧光莓鉴定标志按物品 `uniqueId` 保存品质记录，13 项功能开关另存关闭的功能 ID，均通过 `PlayerStore.ModData()` 随各存档保存；其余高亮、预测、鉴定详情和改造人检测不新增存档数据。卸载 Mod 不会自动恢复已经写入存档的预约、冷却、现金、罪案、鉴定记录或功能设置字段，升级和回滚前应备份存档。
 
 其他修改相同交易、日结、电话、调查、物品或客户规则的 Mod 可能改变补丁顺序或使预测与真实结果不一致。测试高亮和鉴定功能前，应停用 `ClientDemandHighlight` 与 `AppraisalAssistant` 并重启，避免重复注入；不要修改第三方 Mod 文件。
 

@@ -27,8 +27,54 @@ internal static class RulesTests
         TestForecastLocalization();
         TestDemandHighlightRules();
         TestAppraisalAssistantRules();
+        TestFeatureSettingsState();
         TestAssistantLocalization();
-        Console.WriteLine($"PASS: {_assertions} assertions; visitor, forecast, automatic offer, highlighting, appraisal and localization rules verified.");
+        TestNightOwlRulesAndLocalization();
+        Console.WriteLine($"PASS: {_assertions} assertions; visitor, forecast, automatic offer, highlighting, appraisal, night owl and localization rules verified.");
+    }
+
+    private static void TestNightOwlRulesAndLocalization()
+    {
+        Assert(NightOwlRules.PerkCost == 2, "Night Owl costs two perk points");
+        Assert(NightOwlRules.PerkId == "nextopeningvisitors_night_owl", "Night Owl has a stable mod-prefixed ID");
+        Assert(!NightOwlRules.HasVisitedToday("mod.place", 0, 8, 8), "A new location is not marked visited on day zero/default state");
+        Assert(NightOwlRules.HasVisitedToday("mod.place", 1, 8, 8), "A location visited on the current day is blocked");
+        Assert(!NightOwlRules.HasVisitedToday("mod.place", 1, 7, 8), "The previous night's visit does not block a new night");
+        Assert(!NightOwlRules.HasVisitedToday("", 1, 8, 8), "An empty location ID is never treated as a valid visited location");
+        Assert(NightOwlRules.CanVisit(false, "mod.place", 1, 8, 8), "Without Night Owl the added per-location restriction does not apply");
+        Assert(!NightOwlRules.CanVisit(true, "mod.place", 1, 8, 8), "Night Owl blocks a repeated location");
+        Assert(NightOwlRules.CanVisit(true, "mod.other", 1, 7, 8), "Night Owl permits a different or not-yet-visited location");
+
+        var locations = new List<string> { "other_mod.alpha", "other_mod.beta", "other_mod.gamma" };
+        var visits = new Dictionary<string, int> { ["other_mod.alpha"] = 1, ["other_mod.beta"] = 0, ["other_mod.gamma"] = 2 };
+        var days = new Dictionary<string, int> { ["other_mod.alpha"] = 8, ["other_mod.beta"] = 0, ["other_mod.gamma"] = 7 };
+        Func<string, string> id = value => value;
+        Func<string, int> visitCount = value => visits[value];
+        Func<string, int> lastDay = value => days[value];
+        Assert(NightOwlRules.HasUnvisited(locations, id, visitCount, lastDay, 8),
+            "Dynamically supplied third-party location IDs are supported");
+        visits["other_mod.beta"] = 1;
+        days["other_mod.beta"] = 8;
+        days["other_mod.gamma"] = 8;
+        Assert(!NightOwlRules.HasUnvisited(locations, id, visitCount, lastDay, 8),
+            "No outing remains after every discovered location was visited that night");
+        Assert(NightOwlRules.HasUnvisited(locations, id, visitCount, lastDay, 9),
+            "Every location becomes available on the following night");
+        Assert(!NightOwlRules.HasUnvisited(new List<string> { "" }, id, value => 0, value => 0, 9),
+            "Invalid empty third-party IDs do not unlock the door");
+        Assert(!NightOwlRules.HasUnvisited<string>(null!, id, visitCount, lastDay, 9),
+            "A missing dynamic location list fails closed");
+
+        string[] locales = { "en", "zh", "ja", "de", "ru", "fr", "es", "pl", "ptBR", "ko", "it" };
+        foreach (string locale in locales)
+        {
+            Assert(!string.IsNullOrWhiteSpace(NightOwlLocalization.Name(locale)), $"Night Owl name localized for {locale}");
+            Assert(!string.IsNullOrWhiteSpace(NightOwlLocalization.Description(locale)), $"Night Owl description localized for {locale}");
+            Assert(!string.IsNullOrWhiteSpace(NightOwlLocalization.RepeatVisit(locale)), $"Repeat-visit notice localized for {locale}");
+            Assert(!string.IsNullOrWhiteSpace(NightOwlLocalization.AllLocationsVisited(locale)), $"All-visited notice localized for {locale}");
+        }
+        Assert(NightOwlLocalization.Name("zh") == "夜猫子", "Chinese perk name is exact");
+        Assert(NightOwlLocalization.Name("nl") == NightOwlLocalization.Name("en"), "Unsupported locales use English");
     }
 
     private static void TestAllSupportedVisitors()
@@ -492,6 +538,24 @@ internal static class RulesTests
         Assert(!AppraisalAssistantRules.ShouldAlertArrival(false, true, true), "No arrival alert before the customer arrives");
         Assert(!AppraisalAssistantRules.ShouldAlertArrival(true, false, false), "Ordinary customer has no arrival alert");
 
+        object firstCustomer = new object();
+        object secondCustomer = new object();
+        var arrivalSession = new ArrivalAlertSession();
+        Assert(!arrivalSession.ShouldShow(false, null, false, true), "No customer means no arrival window");
+        Assert(arrivalSession.ShouldShow(true, firstCustomer, true, true), "Eligible customer gets one arrival window");
+        Assert(arrivalSession.Dismiss(firstCustomer), "Manual close dismisses the current customer window");
+        Assert(!arrivalSession.ShouldShow(true, firstCustomer, true, true), "Closed arrival window does not reopen");
+        Assert(!arrivalSession.ShouldShow(true, firstCustomer, true, false), "UI becoming unavailable keeps the window closed");
+        Assert(!arrivalSession.ShouldShow(true, firstCustomer, true, true), "UI readiness recovery does not reopen a dismissed window");
+        Assert(!arrivalSession.Dismiss(secondCustomer), "Another customer cannot dismiss the current session");
+        Assert(arrivalSession.ShouldShow(true, secondCustomer, true, true), "A new customer gets a fresh arrival window");
+        Assert(!arrivalSession.Dismiss(firstCustomer), "A stale close callback does not dismiss the new customer");
+        Assert(arrivalSession.ShouldShow(true, secondCustomer, true, true), "New customer window survives stale callbacks");
+        Assert(arrivalSession.Dismiss(secondCustomer), "Second customer window can also be dismissed");
+        Assert(!arrivalSession.ShouldShow(false, null, false, false), "Customer leaving resets the arrival session");
+        Assert(arrivalSession.ShouldShow(true, secondCustomer, true, true), "A later arrival can show one new window");
+        Assert(!arrivalSession.ShouldShow(true, secondCustomer, false, true), "Ordinary customer never opens the alert");
+
         Assert(AppraisalAssistantRules.GetBerryQuality(-2, 0) == BerryQuality.Moldy, "Berry mold mapping");
         Assert(AppraisalAssistantRules.GetBerryQuality(2, null) == BerryQuality.Small, "Small berry mapping");
         Assert(AppraisalAssistantRules.GetBerryQuality(0, 0) == BerryQuality.Normal, "Normal berry mapping");
@@ -544,6 +608,142 @@ internal static class RulesTests
         Assert(AppraisalAssistantRules.Ribwich(
             0, 40, 0, 0, 0, 1, 425, 1, 0, -1, 0, 0) == null,
             "Native counterfeit state without a detected reason is not explained by guesswork");
+
+        Assert(AppraisalAssistantRules.GetBerryMarkerStyle(BerryQuality.Moldy) == BerryMarkerStyle.Moldy,
+            "Moldy berries use the red cross marker");
+        Assert(AppraisalAssistantRules.GetBerryMarkerStyle(BerryQuality.Dry) == BerryMarkerStyle.Dry,
+            "Dry berries use the purple exclamation marker");
+        Assert(AppraisalAssistantRules.GetBerryMarkerStyle(BerryQuality.Normal) == BerryMarkerStyle.Normal,
+            "Normal berries use the yellow minus marker");
+        Assert(AppraisalAssistantRules.GetBerryMarkerStyle(BerryQuality.Small) == BerryMarkerStyle.Small,
+            "Small berries use the green plus marker");
+        Assert(AppraisalAssistantRules.GetBerryMarkerStyle(BerryQuality.Unknown) == BerryMarkerStyle.None,
+            "Unknown berries have no quality marker");
+        Assert(AppraisalAssistantRules.GetBerryMarkerStyle(BerryQuality.Unripe) == BerryMarkerStyle.None,
+            "Unripe berries do not borrow a different quality marker");
+
+        var berryState = new BerryAppraisalState();
+        Assert(!berryState.TryGetQuality(101, out _), "Unappraised item has no stored quality");
+        Assert(!berryState.Mark(0, BerryQuality.Normal), "Invalid item ID is not recorded");
+        Assert(berryState.Mark(202, BerryQuality.Normal), "Normal appraisal is recorded");
+        Assert(berryState.Mark(101, BerryQuality.Moldy), "Moldy appraisal is recorded");
+        Assert(berryState.TryGetQuality(101, out BerryQuality storedQuality) && storedQuality == BerryQuality.Moldy,
+            "Quality is associated with the exact item ID");
+        Assert(!berryState.TryGetQuality(303, out _), "One appraisal never marks another item");
+        Assert(berryState.Serialize() == "1|101:3,202:1", "Berry appraisal save is deterministic and sorted");
+        Assert(berryState.Mark(202, BerryQuality.Dry), "Reappraisal updates the recorded quality");
+        Assert(berryState.TryGetQuality(202, out storedQuality) && storedQuality == BerryQuality.Dry,
+            "Reappraisal replaces the old quality");
+        Assert(BerryAppraisalState.TryDeserialize(berryState.Serialize(), out BerryAppraisalState? restored),
+            "Valid berry appraisal data deserializes");
+        Assert(restored.Count == 2 && restored.TryGetQuality(202, out storedQuality) && storedQuality == BerryQuality.Dry,
+            "Saved quality survives a round trip");
+        Assert(BerryAppraisalState.TryDeserialize("1|", out restored) && restored.Count == 0,
+            "Empty save data is valid");
+        Assert(BerryAppraisalState.TryDeserialize("", out restored) && restored.Count == 0,
+            "Missing save data starts unidentified");
+        Assert(!BerryAppraisalState.TryDeserialize("2|101:3", out _), "Unsupported schema is rejected");
+        Assert(!BerryAppraisalState.TryDeserialize("1|0:3", out _), "Invalid saved item ID is rejected");
+        Assert(!BerryAppraisalState.TryDeserialize("1|101:99", out _), "Unknown saved quality is rejected");
+        Assert(!BerryAppraisalState.TryDeserialize("1|101:3,101:1", out _), "Duplicate item IDs are rejected");
+        Assert(!BerryAppraisalState.TryDeserialize("not-a-save", out _), "Malformed save data is rejected");
+        Assert(berryState.Mark(101, BerryQuality.Unknown) && !berryState.TryGetQuality(101, out _),
+            "Clearing an unknown quality removes the old marker");
+    }
+
+    private static void TestFeatureSettingsState()
+    {
+        Assert(FeatureCatalog.All.Length == 13, "Every optional mod feature has an independent setting");
+        Assert(Array.IndexOf(FeatureCatalog.All, ModFeature.AppointmentDeduplication) < 0,
+            "Appointment deduplication is always enabled instead of optional");
+        Assert(Array.IndexOf(FeatureCatalog.All, ModFeature.PhoneDialogueText) < 0,
+            "Phone dialogue rewriting is always enabled instead of optional");
+        var state = new FeatureSettingsState();
+        foreach (ModFeature feature in FeatureCatalog.All)
+        {
+            Assert(state.IsEnabled(feature), $"Feature defaults to enabled: {feature}");
+            Assert(!string.IsNullOrWhiteSpace(FeatureCatalog.Label(feature, "zh")), $"Chinese feature label: {feature}");
+            Assert(!string.IsNullOrWhiteSpace(FeatureCatalog.Label(feature, "en")), $"English feature label: {feature}");
+        }
+        string[] locales = { "en", "zh", "ja", "de", "ru", "fr", "es", "pl", "ptBR", "ko", "it" };
+        ModFeature[] labeled =
+        {
+            ModFeature.VisitorPriority,
+            ModFeature.AppointmentDeduplication,
+            ModFeature.PhoneCooldownReset,
+            ModFeature.PhoneDialogueText,
+            ModFeature.TradeForecast,
+            ModFeature.NightForecast,
+            ModFeature.AutomaticEvidenceCleanup,
+            ModFeature.CustomerDemandHighlight,
+            ModFeature.SecurityInspectionHighlight,
+            ModFeature.GunsmithHighlight,
+            ModFeature.AutomaticAppraisalValue,
+            ModFeature.AppraisalDetails,
+            ModFeature.BerryQualityMarker,
+            ModFeature.MagnifierAugDetection,
+            ModFeature.ArrivalIdentityAlert
+        };
+        foreach (string locale in locales)
+        {
+            foreach (string key in FeatureSettingsLocalization.AllKeys)
+                Assert(!string.IsNullOrWhiteSpace(FeatureSettingsLocalization.Get(key, locale)),
+                    $"Settings text {key} localized for {locale}");
+            foreach (ModFeature feature in labeled)
+                Assert(!string.IsNullOrWhiteSpace(FeatureCatalog.Label(feature, locale)),
+                    $"Feature label localized for {locale}: {feature}");
+        }
+        Assert(FeatureSettingsLocalization.Get("ui.title", "nl") ==
+            FeatureSettingsLocalization.Get("ui.title", "en"),
+            "Unsupported settings locale uses English");
+        Assert(FeatureCatalog.Label(ModFeature.ArrivalIdentityAlert, "nl") ==
+            FeatureCatalog.Label(ModFeature.ArrivalIdentityAlert, "en"),
+            "Unsupported feature-label locale uses English");
+        Assert(FeatureSettingsLocalization.Get("ui.title", "zh") == "Next Opening：功能开关",
+            "Chinese feature list title is unchanged");
+        Assert(FeatureSettingsLocalization.Get("ui.intro", "en") ==
+            "Each toggle applies immediately and is saved with the run. Press F8 again to close.",
+            "English feature list intro is unchanged");
+        Assert(FeatureCatalog.Label(ModFeature.VisitorPriority, "zh") == "供货商与奥丁下一次开店优先到访",
+            "Chinese visitor-priority label is unchanged");
+        Assert(FeatureSettingsLocalization.Get("ui.title", "ja") !=
+            FeatureSettingsLocalization.Get("ui.title", "en"),
+            "Japanese feature list title is distinct");
+        Assert(FeatureSettingsLocalization.Get("ui.enableAll", "zh-Hans") ==
+            FeatureSettingsLocalization.Get("ui.enableAll", "zh"),
+            "Chinese aliases use the Chinese settings table");
+        Assert(FeatureSettingsLocalization.Get("ui.title", "pt-BR") ==
+            FeatureSettingsLocalization.Get("ui.title", "ptBR"),
+            "Portuguese aliases use the Brazilian Portuguese settings table");
+        state.Set(ModFeature.VisitorPriority, false);
+        state.Set(ModFeature.CustomerDemandHighlight, false);
+        state.Set(ModFeature.ArrivalIdentityAlert, false);
+        Assert(!state.IsEnabled(ModFeature.VisitorPriority), "One feature can be disabled independently");
+        Assert(state.IsEnabled(ModFeature.AppointmentDeduplication), "Disabling one feature preserves unrelated settings");
+        Assert(state.Serialize() == "1|0,7,14", "Disabled feature IDs serialize in stable order");
+        Assert(FeatureSettingsState.TryDeserialize(state.Serialize(), out FeatureSettingsState? restored),
+            "Valid feature settings deserialize");
+        Assert(!restored.IsEnabled(ModFeature.CustomerDemandHighlight) &&
+            !restored.IsEnabled(ModFeature.ArrivalIdentityAlert) && restored.IsEnabled(ModFeature.TradeForecast),
+            "Feature toggles survive a save round trip");
+        Assert(FeatureSettingsState.TryDeserialize("1|", out restored) && restored.IsEnabled(ModFeature.VisitorPriority),
+            "Empty settings keep all defaults enabled");
+        Assert(!FeatureSettingsState.TryDeserialize("2|0", out _), "Unsupported settings schema is rejected");
+        Assert(!FeatureSettingsState.TryDeserialize("1|15", out _), "Unknown feature ID is rejected");
+        Assert(!FeatureSettingsState.TryDeserialize("1|0,0", out _), "Duplicate feature IDs are rejected");
+        Assert(!FeatureSettingsState.TryDeserialize("all-off", out _), "Malformed feature settings are rejected");
+        state.SetAll(false);
+        bool allDisabled = true;
+        foreach (ModFeature feature in FeatureCatalog.All) allDisabled &= !state.IsEnabled(feature);
+        Assert(allDisabled, "Disable-all updates every feature");
+        Assert(FeatureSettingsState.TryDeserialize(state.Serialize(), out restored), "Disable-all serializes");
+        bool restoredDisabled = true;
+        foreach (ModFeature feature in FeatureCatalog.All) restoredDisabled &= !restored.IsEnabled(feature);
+        Assert(restoredDisabled, "Disable-all survives a save round trip");
+        state.SetAll(true);
+        bool allEnabled = true;
+        foreach (ModFeature feature in FeatureCatalog.All) allEnabled &= state.IsEnabled(feature);
+        Assert(allEnabled, "Enable-all restores every feature");
     }
 
     private static void TestAssistantLocalization()
@@ -566,17 +766,50 @@ internal static class RulesTests
             "Hidden aug maps to the honest no-clue explanation");
         Assert(AssistantLocalization.ReasonKey(AugDetectionReason.None) == AssistantLocalization.NoAug,
             "Non-aug maps to the negative inspection result");
-        foreach (string locale in locales)
+        foreach (string key in AssistantAppraisalLocalization.AllKeys)
         {
-            Assert(!string.IsNullOrWhiteSpace(AssistantAppraisalLocalization.Get("auth.counterfeit", locale)),
-                $"Authenticity result available for {locale}");
-            Assert(!string.IsNullOrWhiteSpace(AssistantAppraisalLocalization.Get("arrival.both", locale)),
-                $"Combined arrival alert available for {locale}");
+            foreach (string locale in locales)
+                Assert(!string.IsNullOrWhiteSpace(AssistantAppraisalLocalization.Get(key, locale)),
+                    $"Appraisal text {key} localized for {locale}");
         }
+        Assert(AssistantAppraisalLocalization.Get("auth.counterfeit", "nl") ==
+            AssistantAppraisalLocalization.Get("auth.counterfeit", "en"),
+            "Unsupported appraisal locale uses English");
+        Assert(AssistantAppraisalLocalization.Get("title.arrival", "nl") ==
+            AssistantAppraisalLocalization.Get("title.arrival", "en"),
+            "Unsupported arrival-title locale uses English");
         Assert(AssistantAppraisalLocalization.Get("auth.genuine", "zh") == "真伪鉴定：正品。",
             "Chinese genuine result is direct");
         Assert(AssistantAppraisalLocalization.Berry(BerryQuality.Dry, "zh") == "干枯",
             "Chinese berry quality is direct");
+        Assert(AssistantAppraisalLocalization.Get("title.appraisal", "zh") == "鉴定详情",
+            "Chinese appraisal window title is unchanged");
+        Assert(AssistantAppraisalLocalization.Get("title.appraisal", "en") == "Appraisal Details",
+            "English appraisal window title is unchanged");
+        Assert(AssistantAppraisalLocalization.Get("title.arrival", "zh") == "顾客身份提醒",
+            "Chinese arrival window title is unchanged");
+        Assert(AssistantAppraisalLocalization.Get("title.arrival", "en") == "Customer Alert",
+            "English arrival window title is unchanged");
+        Assert(AssistantAppraisalLocalization.Get("title.appraisal", "ja") !=
+            AssistantAppraisalLocalization.Get("title.appraisal", "en"),
+            "Japanese appraisal title is distinct");
+        Assert(AssistantAppraisalLocalization.Get("auth.genuine", "zh-Hant") ==
+            AssistantAppraisalLocalization.Get("auth.genuine", "zh"),
+            "Traditional Chinese aliases use the Simplified table");
+        Assert(AssistantAppraisalLocalization.Get("arrival.name", "pt") ==
+            AssistantAppraisalLocalization.Get("arrival.name", "ptBR"),
+            "Portuguese aliases use the Brazilian Portuguese appraisal table");
+        foreach (string locale in locales)
+        {
+            Assert(AssistantAppraisalLocalization.Get("value.title", locale, 321).Contains("321"),
+                $"Appraisal value keeps amount for {locale}");
+            Assert(AssistantAppraisalLocalization.Get("arrival.reward", locale, 250).Contains("250"),
+                $"Arrival reward keeps amount for {locale}");
+            Assert(AssistantAppraisalLocalization.Get("reason.serialRecalled", locale, "ABC").Contains("ABC"),
+                $"Recalled batch keeps identifier for {locale}");
+            Assert(AssistantAppraisalLocalization.Get("value.highFacility", locale, "12").Contains("12"),
+                $"Facility line keeps identifier for {locale}");
+        }
         AppraisalValueBreakdown sample = AppraisalAssistantRules.Hand(
             "CARBON_COMPOSITE", "EMG_PLUS", "NONE", "ARMORED", "BLADED")!;
         string formula = AssistantAppraisalLocalization.FormatBreakdown(sample, "zh");

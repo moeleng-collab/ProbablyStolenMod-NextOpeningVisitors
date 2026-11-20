@@ -14,32 +14,40 @@ namespace NextOpeningVisitors
 
         public void OnEnable()
         {
-            TradeForecastUI.SetEnabled(true);
-            NightForecastUI.SetEnabled(true);
-            DemandHighlightUI.SetEnabled(true);
-            AppraisalAssistantUI.SetEnabled(true);
-            ModHook.OnGameLoadedLate += AutoEvidenceCallController.OnGameLoaded;
+            NightOwlController.Register();
+            FeatureSettings.SetModActive(true);
+            FeatureSettings.ApplyAll();
+            ModHook.OnGameLoadedLate += HandleGameLoaded;
             ModHook.OnNewGameStarted += HandleNewGame;
             ModHook.OnWakingUpLate += AutoEvidenceCallController.OnWakingUp;
-            Log?.Log("Initialized: Next Opening Visitors v1.6.0");
+            Log?.Log("Initialized: Next Opening Visitors v1.7.0");
         }
 
         public void OnDisable()
         {
-            TradeForecastUI.SetEnabled(false);
-            NightForecastUI.SetEnabled(false);
-            DemandHighlightUI.SetEnabled(false);
-            AppraisalAssistantUI.SetEnabled(false);
-            ModHook.OnGameLoadedLate -= AutoEvidenceCallController.OnGameLoaded;
+            NightOwlController.Unregister();
+            FeatureSettings.SetModActive(false);
+            FeatureSettings.ApplyAll();
+            ModHook.OnGameLoadedLate -= HandleGameLoaded;
             ModHook.OnNewGameStarted -= HandleNewGame;
             ModHook.OnWakingUpLate -= AutoEvidenceCallController.OnWakingUp;
-            AutoEvidenceCallController.Shutdown();
             Log?.Log("Disabled: Next Opening Visitors");
+        }
+
+        private static void HandleGameLoaded()
+        {
+            FeatureSettings.LoadState();
+            FeatureSettings.ApplyAll();
+            AutoEvidenceCallController.OnGameLoaded();
+            BerryQualityUI.OnGameLoaded();
         }
 
         private static void HandleNewGame(string scenarioId)
         {
+            FeatureSettings.LoadState();
+            FeatureSettings.ApplyAll();
             AutoEvidenceCallController.OnNewGame();
+            BerryQualityUI.OnGameLoaded();
         }
     }
 
@@ -56,11 +64,14 @@ namespace NextOpeningVisitors
                 if (duplicates > 0)
                     NextOpeningVisitorsMod.Log?.Log($"Removed {duplicates} duplicate supplier/Odin appointment(s); kept the earliest.");
 
-                int changed = VisitorRules.NormalizeDelays(
-                    __instance.futurStoreClientIdQueue,
-                    __instance.futurStoreClientDayQueue);
-                if (changed > 0)
-                    NextOpeningVisitorsMod.Log?.Log($"Scheduled {changed} supplier/Odin visit(s) for the next opening.");
+                if (FeatureSettings.IsEnabled(ModFeature.VisitorPriority))
+                {
+                    int changed = VisitorRules.NormalizeDelays(
+                        __instance.futurStoreClientIdQueue,
+                        __instance.futurStoreClientDayQueue);
+                    if (changed > 0)
+                        NextOpeningVisitorsMod.Log?.Log($"Scheduled {changed} supplier/Odin visit(s) for the next opening.");
+                }
             }
             catch (Exception exception)
             {
@@ -70,6 +81,7 @@ namespace NextOpeningVisitors
 
         private static void Postfix(PlayerStore __instance)
         {
+            if (!FeatureSettings.IsEnabled(ModFeature.VisitorPriority)) return;
             try
             {
                 StoreClientManager? manager = __instance.storeClientManager;

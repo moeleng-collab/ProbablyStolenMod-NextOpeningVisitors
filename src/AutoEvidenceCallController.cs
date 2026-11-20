@@ -11,6 +11,11 @@ namespace NextOpeningVisitors
 
         private static bool Prefix(StorePhoneClient __instance, ref Dialogue? __result)
         {
+            if (!FeatureSettings.IsEnabled(ModFeature.AutomaticEvidenceCleanup))
+            {
+                InjectedDialog = null;
+                return true;
+            }
             if (InjectedDialog == null || __instance == null ||
                 __instance != StorePhoneClient.GetWildPhoneClient()) return true;
             __result = InjectedDialog;
@@ -32,12 +37,26 @@ namespace NextOpeningVisitors
 
         private static AutoEvidenceCallState? _state;
         private static AutoEvidenceCallHost? _host;
+        private static bool _enabled;
         private static bool _armed;
         private static bool _acceptInProgress;
         private static int _presentedOfferDay = -1;
 
+        internal static void SetEnabled(bool enabled)
+        {
+            if (_enabled == enabled) return;
+            _enabled = enabled;
+            if (!enabled)
+            {
+                Shutdown();
+                return;
+            }
+            if (PlayerStore.HasInstance) OnGameLoaded();
+        }
+
         internal static void OnGameLoaded()
         {
+            if (!_enabled) return;
             EnsureRegistered();
             LoadState();
             _presentedOfferDay = -1;
@@ -48,6 +67,7 @@ namespace NextOpeningVisitors
 
         internal static void OnNewGame()
         {
+            if (!_enabled) return;
             EnsureRegistered();
             LoadState();
             _presentedOfferDay = -1;
@@ -57,6 +77,7 @@ namespace NextOpeningVisitors
 
         internal static void OnWakingUp()
         {
+            if (!_enabled) return;
             EnsureRegistered();
             LoadState();
             _presentedOfferDay = -1;
@@ -161,7 +182,7 @@ namespace NextOpeningVisitors
 
         internal static void OnPhoneOpened()
         {
-            if (_state?.HasPendingOffer != true || StoreStation.Instance == null) return;
+            if (!_enabled || _state?.HasPendingOffer != true || StoreStation.Instance == null) return;
             int day = StoreStation.Instance.dayCounter;
             if (_state.OfferDay != day || _presentedOfferDay != day ||
                 PhoneUIManager.Instance?.currentPhoneClient != null) return;
@@ -173,7 +194,7 @@ namespace NextOpeningVisitors
 
         internal static void TryPresentPending()
         {
-            if (!_armed || _state == null) return;
+            if (!_enabled || !_armed || _state == null) return;
             PlayerStore? store = PlayerStore.Instance;
             PhoneUIManager? phone = PhoneUIManager.Instance;
             if (store?.secData == null || phone == null || StoreStation.Instance == null) return;
@@ -300,6 +321,7 @@ namespace NextOpeningVisitors
         {
             nextPrice = 0;
             string locale = LocHelper.GetCurrentLocaleCode();
+            if (!_enabled) return CrimeForecastLocalization.Get(CrimeForecastLocalization.Failure, locale);
             if (_acceptInProgress)
                 return CrimeForecastLocalization.Get(CrimeForecastLocalization.Failure, locale);
             _acceptInProgress = true;

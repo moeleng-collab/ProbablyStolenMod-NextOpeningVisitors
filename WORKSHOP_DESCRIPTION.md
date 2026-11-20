@@ -2,158 +2,78 @@
 
 ## 中文介绍
 
-**让供货商与奥丁在下一次开店时优先到访，并在承担罪案风险前看清可能的结果。**
+**集访客安排、风险预测、物品辅助与夜间外出于一体的综合功能 Mod。**
 
-1.6.0 在预约、预测与王哥服务基础上，新增需求与盘查高亮、武器配件动态匹配、放大镜鉴定及身份提醒。
+### 开局特性：夜猫子（2 点）
 
-### 主要功能
+- 夜间外出不限总次数，但每个地点每晚只能成功前往一次，次日恢复。
+- 当晚重复地点会在地图上禁用并提示；访问记录随原生存档保存。
+- 自动兼容其他 Mod 通过原生地点系统添加并使用原生旅行流程的夜间地点。
+- 不绕过重伤、戒严、广场恐惧症休息期或地点事件等其他限制。
 
-#### 下一次开店优先到访
+### 访客与电话
 
-- 开店前、营业中或关店后联系供货商与奥丁，都会安排在下一次开店优先到访。
-- 多个目标访客排在普通访客之前，并保持原有相对顺序。
-- 同一供货商的普通订单、首次联系和免费样品预约会统一去重，避免重复到访。
+- 四位供货商与奥丁在下一次开店时优先到访，多个目标保持原有顺序。
+- 合并同一联系人的普通订单、首次联系和免费样品预约，避免重复访客。
+- 电话界面可一键清除目标联系人的冷却；已有预约的联系人自动跳过，不取消预约。
+- 相关订单、首次联系、免费样品和奥丁对话统一显示“下一次开店”。
 
-#### 一键清除电话冷却
+### 交易与调查
 
-电话界面的号码显示区提供 **“清除冷却”** 按钮：
+- 交易平板显示当前调查进度、当前案值、预计成交后案值及本次新增案值。
+- 日终平板根据当前收尾人选择预测夜间案值、调查变化和次日调查进度，达到 100 时显示警示。
+- 调查达到 100 后，王哥会自动来电提供付费清除服务；首次价格为 1000 现金，成功后下一价格按当前价格的 1.2 倍取整。
+- 待处理报价随存档保存；拒绝、余额不足或失败不会扣款或涨价。清除只重置调查进度与案件状态，不清除案值或撤回既有调查流程。
 
-- 清除四位供货商与奥丁的电话冷却；
-- 已有待到访预约的联系人自动跳过；
-- 不取消预约，也不会因此制造重复访客。
+### 物品与顾客辅助
 
-#### 交易案值／调查预测
+- 物品高亮：绿色表示顾客需求，黄色表示赃物，红色表示违禁品；支持容器、垃圾桶和旋转物品。
+- 武器定制与改造订单会高亮合适的基础武器和配件，并在条件达成后撤除对应提示。
+- 放大镜鉴定自动填入真实估值，但不自动提交；同时显示适用物品的真伪原因、逐项价值和荧光莓品质。
+- 已鉴定荧光莓在物品格右上角显示品质标志：红叉发霉、紫叹号干瘪、黄减号普通、绿加号小果；未鉴定不显示。
+- 放大镜可检测改造人并显示理由；改造体或通缉犯到店时直接显示身份、真名、改造等级与举报奖励，手动关闭后不重复弹出。
 
-交易平板新增当前调查进度和案值变化：
+### 设置与语言
 
-- 当前案值、预计成交后案值与本次新增案值；
-- 计算赃物、违禁品、双标签、客户阵营、证据豁免和相关特长；
-- 没有可出售物品时不占用额外空间。
-
-预测只是预测，不会替你成交，也不会直接增加调查或修改存档。
-
-#### 睡前动态调查预测
-
-日终平板根据当前收尾人选择显示：
-
-- 预计夜间案值；
-- 预计调查变化；
-- 次日调查进度与达到 100 的警示。
-
-切换夜间收尾人后即时重算。预测不扣服务费，也不会提前执行夜间结算。
-
-#### 调查满值后的王哥自动来电
-
-调查达到 100 后，王哥会在新日或读取符合条件的存档后自动来电，每天最多生成一次报价：
-
-- 首次接受价格为 1000 现金，成功后下一价格按 `Round(当前价格 × 1.2)` 增长；
-- 拒绝、余额不足或操作失败不会扣款或涨价；
-- 待处理报价随存档保存，未选择关闭后可在当天重开电话继续处理；
-- 只使用玩家现金，不消耗 Wild Favor。
-
-**自动清除只重置调查进度和案件状态，不会抹除案值、取消既有调查流程或撤回已派遣治安官，也不是永久免于判决。**
-
-#### 需求、盘查与武器配件高亮
-
-- 绿色标出顾客需求，黄色标出赃物，红色标出违禁品；支持箱内物品、垃圾桶和旋转物品。
-- 武器定制与改造订单会标出合适的基础武器及配件；条件达成后，相关配件提示自动撤除。
-
-#### 放大镜鉴定与身份提醒
-
-- 自动填入真实估值，并显示真伪原因、逐项价值或荧光莓品质；不会自动提交交易。
-- 改造体与通缉犯到店时直接提醒，显示真名、改造等级与举报奖励。
-
-#### 电话文案与 11 种语言
-
-订单、首次联系、免费样品和奥丁到访提示统一为“下一次开店”。新增预测、服务、电话与结果提示均支持游戏内 **11 种语言**。
-
-### 使用方式
-
-1. 启用 Mod 后进入游戏，按提示重启。
-2. 像原版一样联系供货商或奥丁，下一次开店即可优先到访。
-3. 出售物品前查看交易平板，睡觉前查看日终平板。
-4. 调查达到 100 后等待王哥来电，再决定是否接受付费清除。
-
-### 这个 Mod 不会改变什么
-
-本 Mod 不直接修改商品价格、特殊事件概率、普通盘查规则、罪案公式或判决阈值。预测仅用于展示；只有明确接受自动来电报价后，才会扣除现金并重置调查进度与案件状态。
+- 按 **F8** 打开功能列表：13 项功能可独立开关、全部开启或全部关闭，设置随存档保存；预约去重和电话文案固定开启。
+- 新增界面、电话、特性与提示支持游戏内 **11 种语言**，未支持的语言回退为英文。
 
 ---
 
 ## English Description
 
-**Suppliers and Odin arrive first at your next opening, and new forecasts let you assess crime risks before committing.**
+**An all-in-one mod for visitor scheduling, risk forecasts, item assistance, and nightly outings.**
 
-Version 1.6.0 adds demand and inspection highlights, dynamic weapon-mod matching, magnifier appraisals, and identity alerts alongside the existing appointment, forecast, and Wild service features.
+### Night Owl — 2-Point Starting Perk
 
-### Features
+- Unlimited total nightly outings, but each location can only be visited successfully once per night, resetting the next day.
+- Repeated locations are disabled on the map with a notice; visit history uses the native save data.
+- Automatically supports third-party locations registered through the native location system and travel flow.
+- Serious wounds, crackdowns, Agoraphobia rest, location events, and other restrictions still apply.
 
-#### Priority on Your Next Opening
+### Visitors and Phone
 
-- Call before opening, while open, or after closing: suppliers and Odin are scheduled for your next opening.
-- Target visitors arrive ahead of ordinary visitors while preserving their relative order.
-- Regular, first-contact, and free-sample appointments are deduplicated per supplier.
+- All four suppliers and Odin arrive first at your next opening while preserving their relative order.
+- Regular orders, first-contact visits, and free-sample appointments are deduplicated per contact.
+- Clear target phone cooldowns with one click; contacts with pending appointments are skipped and appointments are preserved.
+- Supplier orders, introductions, free samples, and Odin's dialogue consistently refer to your next opening.
 
-#### One-Click Phone Cooldown Clearing
+### Trade and Investigation
 
-A **Clear Cooldowns** button in the phone UI:
+- The negotiation tablet shows current investigation progress, current crime value, projected post-sale value, and the added amount.
+- The end-of-day tablet forecasts nightly crime value, investigation changes, and next-day progress based on the selected fixer, with a warning at 100.
+- At 100 investigation, Wild automatically calls with a paid cleanup offer. The first cleanup costs 1000 cash; each success raises the next price to 1.2 times the current price, rounded.
+- Pending offers persist with the save. Declining, insufficient cash, and failures never charge you or raise the price. Cleanup resets investigation progress and case state only; it does not erase crime values or reverse existing investigation processes.
 
-- Clears cooldowns for all four suppliers and Odin;
-- Skips contacts with pending visits;
-- Preserves appointments and does not create duplicate visitors.
+### Item and Visitor Assistance
 
-#### Trade Crime and Investigation Forecast
+- Item highlights: green for customer demand, yellow for stolen goods, and red for contraband, including containers, trash, and rotated items.
+- Weapon customization and modification orders highlight compatible base weapons and parts, removing hints as requirements are met.
+- The magnifier fills accurate appraisal values without submitting, and shows applicable authenticity reasons, value breakdowns, and Glowberry quality.
+- Appraised Glowberries show a corner marker: red cross for moldy, purple exclamation for shriveled, yellow minus for normal, and green plus for small. Unappraised berries show none.
+- Detect augmented humans with the magnifier and see the reason. Augmented or wanted visitors trigger identity, real-name, augmentation-tier, and bounty alerts; dismissed alerts do not reopen for that visitor.
 
-The negotiation tablet now shows:
+### Settings and Languages
 
-- Current investigation progress;
-- Current crime value, projected post-sale value, and the added amount;
-- Stolen goods, contraband, dual tags, client factions, evidence exemptions, and relevant perks.
-
-The extra area collapses when nothing is sellable. Forecasts are read-only: they do not complete sales, increase investigation, or change save data.
-
-#### Dynamic Nightly Investigation Forecast
-
-The end-of-day tablet shows:
-
-- Projected nightly crime value;
-- Expected investigation change;
-- Next investigation progress and a warning when it will reach 100.
-
-Switching the night fixer recalculates the forecast immediately. It does not charge the service fee or run the real nightly settlement.
-
-#### Automatic Wild Call at 100 Investigation
-
-When investigation reaches 100, Wild can call at the start of a new day, with at most one offer generated per day:
-
-- The first accepted cleanup costs 1000 cash; each success raises the next price to `Round(current price × 1.2)`;
-- Declining, insufficient cash, and failures do not charge you or raise the price;
-- Pending offers persist with the save and can be resumed by reopening the phone on the same day;
-- Payment uses player cash only, never Wild Favor.
-
-**Cleanup resets only investigation progress and case state. It does not erase crime values, cancel existing investigation processes, or recall dispatched officers, and it is not permanent immunity from judgment.**
-
-#### Demand, Inspection and Weapon Highlights
-
-- Green marks demand, yellow stolen goods, and red contraband, including containers, trash and rotated items.
-- Gun orders highlight compatible weapons and mods, removing mod hints as requirements are met.
-
-#### Appraisal and Identity Alerts
-
-- The magnifier fills accurate values and shows authenticity, value breakdowns or Glowberry quality; it never submits for you.
-- Augmented and wanted visitors trigger name, augmentation-tier and bounty alerts.
-
-#### Dialogue and 11 Languages
-
-Supplier orders, introductions, free samples, and Odin's messages consistently refer to your next opening. New forecasts, service text, calls, and results support all **11 in-game languages**.
-
-### How to Use
-
-1. Enable the Mod, start the game, and restart when prompted.
-2. Contact suppliers or Odin as usual and open the shop to receive them first.
-3. Check the negotiation tablet before selling and the end-of-day tablet before sleeping.
-4. At 100 investigation, wait for Wild's call and decide whether to accept the paid cleanup.
-
-### What This Mod Does Not Change
-
-It does not directly modify item prices, special-event probabilities, ordinary inspection rules, crime formulas, or judgment thresholds. Forecasts are display-only; cash and investigation change only after you explicitly accept the automatic call's offer.
+- Press **F8** for 13 independent feature toggles, enable-all and disable-all controls, and per-save settings. Appointment deduplication and phone dialogue are always enabled.
+- Added UI, phone text, perks, and notices support all **11 in-game languages**, with English fallback for unsupported languages.

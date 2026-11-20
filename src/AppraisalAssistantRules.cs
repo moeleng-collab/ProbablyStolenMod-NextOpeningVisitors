@@ -69,6 +69,40 @@ namespace NextOpeningVisitors
         }
     }
 
+    internal sealed class ArrivalAlertSession
+    {
+        private object? _customer;
+        private bool _dismissed;
+
+        internal bool ShouldShow(bool arrived, object? customer, bool eligible, bool uiReady)
+        {
+            if (!arrived || customer == null)
+            {
+                Reset();
+                return false;
+            }
+            if (!ReferenceEquals(_customer, customer))
+            {
+                _customer = customer;
+                _dismissed = false;
+            }
+            return eligible && uiReady && !_dismissed;
+        }
+
+        internal bool Dismiss(object? customer)
+        {
+            if (customer == null || !ReferenceEquals(_customer, customer)) return false;
+            _dismissed = true;
+            return true;
+        }
+
+        internal void Reset()
+        {
+            _customer = null;
+            _dismissed = false;
+        }
+    }
+
     internal static class AppraisalAssistantRules
     {
         internal static bool CanAutoFill(bool appraisalService, bool appraisalItem, int correctValue)
@@ -113,6 +147,18 @@ namespace NextOpeningVisitors
                 if (visualVariant.Value == 2) return BerryQuality.Dry;
             }
             return BerryQuality.Unknown;
+        }
+
+        internal static BerryMarkerStyle GetBerryMarkerStyle(BerryQuality quality)
+        {
+            switch (quality)
+            {
+                case BerryQuality.Moldy: return BerryMarkerStyle.Moldy;
+                case BerryQuality.Dry: return BerryMarkerStyle.Dry;
+                case BerryQuality.Normal: return BerryMarkerStyle.Normal;
+                case BerryQuality.Small: return BerryMarkerStyle.Small;
+                default: return BerryMarkerStyle.None;
+            }
         }
 
         internal static AppraisalValueBreakdown? Hand(string? material, string? iface,

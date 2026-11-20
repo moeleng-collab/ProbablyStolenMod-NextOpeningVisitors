@@ -6,8 +6,8 @@ namespace NextOpeningVisitors
     {
         internal static string NormalizeLocale(string? localeCode)
         {
-            if (string.IsNullOrEmpty(localeCode)) return "en";
-            string code = localeCode!.Replace("-", "").Replace("_", "");
+            if (localeCode == null || localeCode.Length == 0) return "en";
+            string code = localeCode.Replace("-", "").Replace("_", "");
             if (code.Equals("zh", StringComparison.OrdinalIgnoreCase) ||
                 code.Equals("zhHans", StringComparison.OrdinalIgnoreCase) ||
                 code.Equals("zhHant", StringComparison.OrdinalIgnoreCase)) return "zh";
